@@ -89,7 +89,7 @@ const Login = () => {
       >
         <div className="flex justify-center mb-4">
           <img
-            src="https://minaramasjid.com/assets/image/logo/minara-masjid.png" // <-- replace with your actual logo path
+            src="https://static.wixstatic.com/media/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png/v1/fill/w_75,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png" // <-- replace with your actual logo path
             alt="Logo"
             className="h-16 w-auto"
           />
