@@ -168,7 +168,7 @@ export default function CreateArticlePage() {
 }
 
 
-      await axios.post("http://localhost:5000/api/postarticle", formData, {
+      await axios.post("https://naatacadmey-backend.onrender.com/api/postarticle", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         mode: "cors",
       });
