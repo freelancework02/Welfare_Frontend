@@ -124,7 +124,7 @@ const ViewArticleList = () => {
                     </td>
                     <td className="py-3 px-4 border-b">
                       <button
-                        onClick={() => navigate(`/viewarticle/article/${article.id}`)}
+                        // onClick={() => navigate(`/viewarticle/article/${article.id}`)}
                         className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
                       >
                         View
