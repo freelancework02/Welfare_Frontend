@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CalendarIcon,
@@ -11,11 +11,10 @@ import {
 } from "lucide-react";
 import Layout from "../../../component/Layout";
 import axios from "axios";
-import Swal from "sweetalert2";
-import Select from "react-select";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
+import Swal from "sweetalert2";
 
 // Font registration for Quill
 const Font = Quill.import("formats/font");
@@ -78,13 +77,6 @@ const formats = [
   "clean",
 ];
 
-const tagOptions = [
-  { label: "Politics", value: "politics" },
-  { label: "Technology", value: "technology" },
-  { label: "Health", value: "health" },
-  { label: "Education", value: "education" },
-];
-
 function Field({ label, icon, children }) {
   return (
     <div>
@@ -111,6 +103,7 @@ export default function CreateArticlePage() {
   const [writerDesignation, setWriterDesignation] = useState("");
   const [publicationDate, setPublicationDate] = useState(getCurrentDate());
   const [selectedTags, setSelectedTags] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -122,31 +115,20 @@ export default function CreateArticlePage() {
     reader.readAsDataURL(file);
   };
 
-  const validateForm = () => {
-    if (!articleTitle || !selectedLanguage || !selectedWriter) {
-      Swal.fire(
-        "Validation Error",
-        "Please fill in required fields.",
-        "warning"
-      );
-      return false;
-    }
-    return true;
-  };
-
   const handleSave = async (isPublish) => {
-    if (!validateForm()) return;
+    if (!articleTitle || !selectedLanguage || !selectedWriter) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Fields",
+        text: "Please fill all required fields including title, language, and writer.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      Swal.fire({
-        title: "Processing...",
-        text: isPublish ? "Publishing your article..." : "Saving your draft...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
-
       const formData = new FormData();
-
       if (uploadedImageFile) formData.append("image", uploadedImageFile);
       formData.append("title", articleTitle);
       formData.append("englishDescription", englishDescription);
@@ -160,43 +142,35 @@ export default function CreateArticlePage() {
       formData.append("createdAt", new Date().toISOString());
 
       if (selectedTranslator) formData.append("translator", selectedTranslator);
-     if (selectedTags.trim() !== "") {
-  selectedTags
-    .split(",")
-    .map((tag) => tag.trim())
-    .forEach((tag) => formData.append("tags[]", tag));
-}
+      if (selectedTags.trim() !== "") {
+        selectedTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .forEach((tag) => formData.append("tags[]", tag));
+      }
 
+      await axios.post(
+        "https://naatacadmey-backend.onrender.com/api/postarticle",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          mode: "cors",
+        }
+      );
 
-      await axios.post("https://naatacadmey-backend.onrender.com/api/postarticle", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        mode: "cors",
-      });
-
-      Swal.fire({
-        icon: "success",
-        title: isPublish ? "Published!" : "Draft Saved!",
-        text: isPublish
-          ? "Your article has been published."
-          : "Your draft has been saved.",
-        timer: 1000,
-        showConfirmButton: false,
-      });
-
+      // Show loading for 2 seconds then refresh
       setTimeout(() => {
-        window.location.href = "/viewarticle";
-      }, 3000);
-    } catch (error) {
-       console.error("Submission error:", error);
+        window.location.reload();
+      }, 2000);
 
-  Swal.fire({
-    icon: "error",
-    title: "Failed",
-    text:
-      error?.response?.data?.message ||
-      error?.message ||
-      "Something went wrong. Please try again.",
-  });
+    } catch (error) {
+      setIsSubmitting(false);
+      console.error("Error submitting article:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Submission Failed",
+        text: error?.response?.data?.message || "Something went wrong. Please check your connection.",
+      });
     }
   };
 
@@ -204,7 +178,6 @@ export default function CreateArticlePage() {
     <Layout>
       <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-6">
-          {/* Breadcrumbs */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link to="/dashboard" className="hover:text-foreground">
               Dashboard
@@ -220,7 +193,6 @@ export default function CreateArticlePage() {
           <h1 className="text-2xl font-bold mb-8">Create Article</h1>
 
           <div className="bg-slate-50 rounded-lg p-8">
-            {/* Image Upload */}
             <section className="mb-6">
               <label className="text-sm font-medium mb-2 block">
                 Featured Image
@@ -267,7 +239,6 @@ export default function CreateArticlePage() {
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Side */}
               <div className="lg:col-span-2 space-y-6">
                 <Field
                   label="Article Title"
@@ -280,6 +251,7 @@ export default function CreateArticlePage() {
                     value={articleTitle}
                     onChange={(e) => setArticleTitle(e.target.value)}
                     required
+                    disabled={isSubmitting}
                   />
                 </Field>
 
@@ -289,11 +261,12 @@ export default function CreateArticlePage() {
                 >
                   <ReactQuill
                     theme="snow"
-                    value={englishDescription}
+                   value={englishDescription || ""}  
                     onChange={setEnglishDescription}
                     modules={modules}
                     formats={formats}
                     className="bg-white border rounded-lg min-h-[136px]"
+                    readOnly={isSubmitting}
                   />
                 </Field>
 
@@ -303,18 +276,18 @@ export default function CreateArticlePage() {
                 >
                   <ReactQuill
                     theme="snow"
-                    value={urduDescription}
+                    value={urduDescription || ""}
                     onChange={setUrduDescription}
                     modules={modules}
                     formats={formats}
                     className="bg-white border rounded-lg min-h-[136px]"
                     style={{ direction: "rtl", textAlign: "right" }}
                     placeholder="اردو تفصیل یہاں درج کریں"
+                    readOnly={isSubmitting}
                   />
                 </Field>
               </div>
 
-              {/* Right Side */}
               <div className="space-y-6">
                 <Field label="Topic" icon={<FileText className="w-4 h-4" />}>
                   <input
@@ -322,6 +295,7 @@ export default function CreateArticlePage() {
                     className="border rounded-lg p-2 w-full"
                     value={selectedTopic}
                     onChange={(e) => setSelectedTopic(e.target.value)}
+                    disabled={isSubmitting}
                   />
                 </Field>
 
@@ -331,6 +305,7 @@ export default function CreateArticlePage() {
                     onChange={(e) => setSelectedLanguage(e.target.value)}
                     className="border rounded-lg p-2 w-full"
                     required
+                    disabled={isSubmitting}
                   >
                     <option value="">Select language</option>
                     {["Urdu", "Roman", "English"].map((lang) => (
@@ -347,6 +322,8 @@ export default function CreateArticlePage() {
                     className="border rounded-lg p-2 w-full"
                     value={selectedWriter}
                     onChange={(e) => setSelectedWriter(e.target.value)}
+                    required
+                    disabled={isSubmitting}
                   />
                 </Field>
 
@@ -356,6 +333,7 @@ export default function CreateArticlePage() {
                     className="border rounded-lg p-2 w-full"
                     value={selectedTranslator}
                     onChange={(e) => setSelectedTranslator(e.target.value)}
+                    disabled={isSubmitting}
                   />
                 </Field>
 
@@ -369,6 +347,7 @@ export default function CreateArticlePage() {
                     placeholder="e.g. politics, technology, health"
                     value={selectedTags}
                     onChange={(e) => setSelectedTags(e.target.value)}
+                    disabled={isSubmitting}
                   />
                 </Field>
 
@@ -382,6 +361,7 @@ export default function CreateArticlePage() {
                     onChange={(e) => setPublicationDate(e.target.value)}
                     className="border rounded-lg p-2 w-full"
                     required
+                    disabled={isSubmitting}
                   />
                 </Field>
               </div>
@@ -390,17 +370,19 @@ export default function CreateArticlePage() {
             <div className="mt-8 flex justify-between">
               <button
                 type="button"
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
+                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => handleSave(false)}
+                disabled={isSubmitting}
               >
-                Save as Draft
+                {isSubmitting ? 'Submitting...' : 'Save as Draft'}
               </button>
               <button
                 type="button"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => handleSave(true)}
+                disabled={isSubmitting}
               >
-                Publish
+                {isSubmitting ? 'Submitting...' : 'Publish'}
               </button>
             </div>
           </div>
