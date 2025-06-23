@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import Layout from "../../../component/Layout";
 import {
   CalendarIcon,
   ImageIcon,
@@ -9,24 +10,18 @@ import {
   Globe,
   Hash,
 } from "lucide-react";
-// import Layout from "../../../component/Layout";
-import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
 import Swal from "sweetalert2";
-import Layout from '../../../component/Layout'
-
-// import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db } from "../../firebase/firebaseConfig";
 import {
   collection,
   addDoc,
   doc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
 } from "firebase/firestore";
-
 
 // Font registration for Quill
 const Font = Quill.import("formats/font");
@@ -102,9 +97,6 @@ function Field({ label, icon, children }) {
 }
 
 export default function CreateArticlePage() {
-  // const fileInputRef = useRef();
-  // const [uploadedImageFile, setUploadedImageFile] = useState(null);
-  // const [uploadedImageURL, setUploadedImageURL] = useState(null);
   const [articleTitle, setArticleTitle] = useState("");
   const [englishDescription, setEnglishDescription] = useState("");
   const [urduDescription, setUrduDescription] = useState("");
@@ -117,75 +109,150 @@ export default function CreateArticlePage() {
   const [selectedTags, setSelectedTags] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // const handleImageUpload = (e) => {
-  //   const file = e.target.files[0];
-  //   if (!file) return;
+  // State for line spacing and text contents
+  const [lineSpacing, setLineSpacing] = useState("1");
+  const [rawTextContents, setRawTextContents] = useState({
+    urdu: "",
+    roman: "",
+    english: "",
+    hindi: "",
+    arabic: "",
+    sharha: ""
+  });
+  const [displayTextContents, setDisplayTextContents] = useState({
+    urdu: "",
+    roman: "",
+    english: "",
+    hindi: "",
+    arabic: "",
+    sharha: ""
+  });
 
-  //   setUploadedImageFile(file);
-  //   const reader = new FileReader();
-  //   reader.onloadend = () => setUploadedImageURL(reader.result);
-  //   reader.readAsDataURL(file);
-  // };
+  // Update displayed text whenever raw text or line spacing changes
+  useEffect(() => {
+    const formattedContents = {};
+    for (const [lang, text] of Object.entries(rawTextContents)) {
+      formattedContents[lang] = formatTextWithLineSpacing(text);
+    }
+    setDisplayTextContents(formattedContents);
+  }, [rawTextContents, lineSpacing]);
 
-const handleSave = async (isPublish) => {
-  if (!articleTitle || !selectedLanguage || !selectedWriter) {
-    Swal.fire({
-      icon: "warning",
-      title: "Incomplete Fields",
-      text: "Please fill all required fields including title, language, and writer.",
-    });
-    return;
-  }
+  const handleTextChange = (language, value) => {
+    setRawTextContents(prev => ({
+      ...prev,
+      [language]: value
+    }));
+  };
 
-  setIsSubmitting(true);
+  const formatTextWithLineSpacing = (text) => {
+    if (!text) return "";
 
-  try {
-    const tagsArray = selectedTags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const spacing = parseInt(lineSpacing);
 
-    const articleData = {
-      slug: articleTitle.toLowerCase().replace(/\s+/g, "-"),
-      createdOn: serverTimestamp(),
-      modifiedOn: serverTimestamp(),
-      title: articleTitle,
-      published: isPublish,
-      writers: selectedWriter,
-      BlogText: {
-        english: englishDescription,
-        urdu: urduDescription,
-      },
-      topic: selectedTopic,
-      tags: tagsArray,
-      language: selectedLanguage,
+    if (spacing === 1) return text;
+
+    let result = [];
+    for (let i = 0; i < lines.length; i += spacing) {
+      const chunk = lines.slice(i, i + spacing).join('\n');
+      result.push(chunk);
+      if (i + spacing < lines.length) {
+        result.push('\n\n'); // Add double line break between chunks
+      }
+    }
+
+    return result.join('');
+  };
+
+
+  function generateSearchKey(...fields) {
+    const keys = new Set();
+
+    const addSubstrings = (s) => {
+      s = s.replace(/\s+/g, '').toLowerCase();
+      for (let i = 1; i <= s.length; i++) {
+        keys.add(s.substring(0, i));
+      }
     };
 
-    const docRef = await addDoc(collection(db, "articlePosts"), articleData);
-
-    await setDoc(doc(db, "articlePosts", docRef.id), {
-      ...articleData,
-      docId: docRef.id,
+    fields.forEach(field => {
+      if (field) addSubstrings(field);
     });
 
-    Swal.fire({
-      icon: "success",
-      title: "Article Submitted",
-      timer: 2000,
-    });
-
-    setTimeout(() => window.location.reload(), 1500);
-  } catch (error) {
-    console.error("Error saving article:", error);
-    setIsSubmitting(false);
-    Swal.fire({
-      icon: "error",
-      title: "Submission Failed",
-      text: error.message || "Something went wrong.",
-    });
+    return Array.from(keys);
   }
-};
 
+
+  const handleSave = async (isPublish) => {
+    if (!articleTitle || !selectedLanguage || !selectedWriter) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Fields",
+        text: "Please fill all required fields including title, language, and writer.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const tagsArray = selectedTags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+
+      // Format all text contents with selected line spacing for saving
+      const formattedContents = {};
+      for (const [lang, text] of Object.entries(rawTextContents)) {
+        formattedContents[lang] = formatTextWithLineSpacing(text).replace(/\n\n/g, '<br><br>');
+      }
+
+      const searchKeys = generateSearchKey(articleTitle, selectedWriter, ...tagsArray);
+
+
+      const articleData = {
+        slug: articleTitle.toLowerCase().replace(/\s+/g, "-"),
+        createdOn: serverTimestamp(),
+        modifiedOn: serverTimestamp(),
+        title: articleTitle,
+        published: isPublish,
+        writers: selectedWriter,
+        BlogText: {
+          english: englishDescription,
+          urdu: urduDescription,
+          ...formattedContents
+        },
+        topic: selectedTopic,
+        tags: tagsArray,
+        language: selectedLanguage,
+        lineSpacing: lineSpacing,
+        searchKeys
+      };
+
+      const docRef = await addDoc(collection(db, "kalamPosts"), articleData);
+
+      await setDoc(doc(db, "kalamPosts", docRef.id), {
+        ...articleData,
+        docId: docRef.id,
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Kalam Submitted",
+        timer: 2000,
+      });
+
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error("Error saving article:", error);
+      setIsSubmitting(false);
+      Swal.fire({
+        icon: "error",
+        title: "Submission Failed",
+        text: error.message || "Something went wrong.",
+      });
+    }
+  };
 
   return (
     <Layout>
@@ -197,66 +264,18 @@ const handleSave = async (isPublish) => {
             </Link>
             <span>&gt;</span>
             <Link to="/articles" className="hover:text-foreground">
-              Articles
+              Kalam
             </Link>
             <span>&gt;</span>
-            <span className="text-foreground">Create Article</span>
+            <span className="text-foreground">Create Kalam</span>
           </nav>
 
-          <h1 className="text-2xl font-bold mb-8">Create Article</h1>
+          <h1 className="text-2xl font-bold mb-8">Create Kalam</h1>
 
           <div className="bg-slate-50 rounded-lg p-8">
-            {/* <section className="mb-6">
-              <label className="text-sm font-medium mb-2 block">
-                Featured Image
-              </label>
-              <div className="max-w-md mx-auto">
-                <div
-                  className="border border-dashed rounded-lg p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition"
-                  onClick={() => fileInputRef.current.click()}
-                >
-                  {uploadedImageURL ? (
-                    <img
-                      src={uploadedImageURL}
-                      alt="Uploaded Preview"
-                      className="w-60 h-60 object-cover rounded-md"
-                    />
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 mb-4 text-muted-foreground">
-                        <ImageIcon className="w-full h-full" />
-                      </div>
-                      <p className="text-base mb-1">
-                        Drop your image or click to browse
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        PNG, JPG, GIF (max 5MB)
-                      </p>
-                      <button
-                        type="button"
-                        className="border px-4 py-2 rounded-md text-sm bg-transparent border-gray-400 hover:border-gray-500"
-                      >
-                        Browse Files
-                      </button>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: "none" }}
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </div>
-              </div>
-            </section> */}
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
-                <Field
-                  label="Article Title"
-                  icon={<Type className="w-4 h-4" />}
-                >
+                <Field label="Kalam Title" icon={<Type className="w-4 h-4" />}>
                   <input
                     type="text"
                     placeholder="Enter title"
@@ -297,6 +316,93 @@ const handleSave = async (isPublish) => {
                     style={{ direction: "rtl", textAlign: "right" }}
                     placeholder="اردو تفصیل یہاں درج کریں"
                     readOnly={isSubmitting}
+                  />
+                </Field>
+
+                {/* Line spacing radio buttons */}
+                <Field label="Post Line Setting" icon={<FileText className="w-4 h-4" />}>
+                  <div className="flex gap-4">
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <label key={num} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="lineSpacing"
+                          value={num}
+                          checked={lineSpacing === num.toString()}
+                          onChange={() => setLineSpacing(num.toString())}
+                          disabled={isSubmitting}
+                        />
+                        {num} Line{num !== 1 ? 's' : ''}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+
+                {/* Language textareas */}
+                <Field label="Post Language 1 - Urdu" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={displayTextContents.urdu}
+                    onChange={(e) => handleTextChange('urdu', e.target.value)}
+                    cols="30"
+                    rows="5"
+                    className="border w-full p-2 rounded-lg"
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field label="Post Language 2 - Roman" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={displayTextContents.roman}
+                    onChange={(e) => handleTextChange('roman', e.target.value)}
+                    cols="30"
+                    rows="5"
+                    className="border w-full p-2 rounded-lg"
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field label="Post Language 3 - English" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={displayTextContents.english}
+                    onChange={(e) => handleTextChange('english', e.target.value)}
+                    cols="30"
+                    rows="5"
+                    className="border w-full p-2 rounded-lg"
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field label="Post Language 4 - Hindi" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={displayTextContents.hindi}
+                    onChange={(e) => handleTextChange('hindi', e.target.value)}
+                    cols="30"
+                    rows="5"
+                    className="border w-full p-2 rounded-lg"
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field label="Post Language 5 - Arabic" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={displayTextContents.arabic}
+                    onChange={(e) => handleTextChange('arabic', e.target.value)}
+                    cols="30"
+                    rows="5"
+                    className="border w-full p-2 rounded-lg"
+                    style={{ direction: 'rtl' }}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field label="Post Language 6 - Sharha" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={displayTextContents.sharha}
+                    onChange={(e) => handleTextChange('sharha', e.target.value)}
+                    cols="30"
+                    rows="5"
+                    className="border w-full p-2 rounded-lg"
+                    disabled={isSubmitting}
                   />
                 </Field>
               </div>
@@ -383,9 +489,8 @@ const handleSave = async (isPublish) => {
             <div className="mt-8 flex justify-between">
               <button
                 type="button"
-                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 onClick={() => handleSave(false)}
                 disabled={isSubmitting}
               >
@@ -393,9 +498,8 @@ const handleSave = async (isPublish) => {
               </button>
               <button
                 type="button"
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 onClick={() => handleSave(true)}
                 disabled={isSubmitting}
               >
@@ -405,6 +509,6 @@ const handleSave = async (isPublish) => {
           </div>
         </div>
       </div>
-     </Layout>
+    </Layout>
   );
 }

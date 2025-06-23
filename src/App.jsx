@@ -1,9 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './component/AuthContext';
+// import { AuthProvider } from './component/AuthContext';
 import ProtectedRoute from './component/ProtectedRoute';
 
-import Login from './component/Login';
+// import Login from './component/Login';
 
 // Public Pages
 import AboutContent from './pages/homepage/elements/AboutContent';
@@ -22,7 +22,7 @@ import ViewArticleList from './pages/homepage/elements/ViewArticleList';
 import ViewArticleDetail from './pages/homepage/elements/ViewArticleDetail';
 import QuestionList from './pages/homepage/elements/QuestionList';
 import CreateQuestion from './pages/homepage/elements/CreateQuestion';
-import AdminList from './pages/homepage/elements/Admin';
+// import AdminList from './pages/homepage/elements/Admin';
 import TranslatorList from './pages/homepage/elements/TranslatorList';
 import LanguagesGrid from './pages/homepage/elements/LanguagesGrid';
 import HomeBookSlider from './pages/homepage/elements/HomeBookSlider';
@@ -39,15 +39,21 @@ import EventUpdateForm from './pages/homepage/EditForms/EventUpdateForm';
 import BookDetailUpdatieForm from './pages/homepage/EditForms/BookDetailUpdatieForm';
 import QuestionUpdateForm from './pages/homepage/EditForms/QuestionUpdateForm';
 import NewDashboard from './pages/homepage/elements/NewDashboard';
+import Createkalam from './pages/homepage/elements/Createkalam';
+import ViewTopics from './pages/homepage/elements/ViewTopics';
+import Viewkalam from './pages/homepage/elements/Viewkalam'
 
 const App = () => {
   return (
-    <AuthProvider>
+    // <AuthProvider>
       <Router>
         <Routes>
 
           {/* Public Routes */}
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<CreateArticlePage />} />
+          <Route path="/kalam" element={<Createkalam />} />
+           <Route path="/viewtopics" element={<ViewTopics />} />
+             <Route path="/viewkalam" element={<Viewkalam />} />
           <Route path="/newdashboard" element={<NewDashboard />} />
           <Route path="/dashboard" element={<DashboardCard />} />
           <Route path="/book" element={<CreateBookPage />} />
@@ -72,7 +78,7 @@ const App = () => {
           <Route path="/createquestion" element={<CreateQuestion />} />
           <Route path="/question-update/:id" element={<QuestionUpdateForm />} />
 
-          <Route path="/admin" element={<AdminList />} />
+          {/* <Route path="/admin" element={<AdminList />} /> */}
           <Route path="/translator" element={<TranslatorList />} />
           <Route path="/languages" element={<LanguagesGrid />} />
           <Route path="/home_book_slider" element={<HomeBookSlider />} />
@@ -213,7 +219,7 @@ const App = () => {
 
         </Routes>
       </Router>
-    </AuthProvider>
+    // </AuthProvider>
   );
 };
 

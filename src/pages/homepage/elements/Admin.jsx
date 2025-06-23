@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from "react";
 import Layout from "../../../component/Layout";
 import Swal from "sweetalert2";
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/firestore';
-import 'firebase/compat/auth';
-import firebaseConfig from "../../firebase/firebaseConfig"
+
 import { UserPlus, Pencil, Eye, Trash2 } from "lucide-react";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc,
+  query,
+  where,
+  serverTimestamp
+} from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 // Initialize Firebase app
 if (!firebase.apps.length) {

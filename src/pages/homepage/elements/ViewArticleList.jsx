@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../../component/Layout';
 import { useNavigate } from 'react-router-dom';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from "../../firebase/firebaseConfig";
 
 const ViewArticleList = () => {
   const [articles, setArticles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [articlesPerPage] = useState(10);
-  const [totalArticles, setTotalArticles] = useState(0);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -14,22 +15,25 @@ const ViewArticleList = () => {
     const fetchArticles = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`https://naatacadmey-backend.onrender.com/api/newarticle`);
-        const data = await response.json();
-        console.log('DATA:', data);
-        setArticles(data.articles || data || []);
-        setTotalArticles(data.totalCount || data.length || 0);
+        const q = query(collection(db, 'articlePosts'), orderBy("createdOn", "desc"));
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setArticles(data);
       } catch (error) {
-        console.error('Error fetching articles:', error);
+        console.error('Error fetching articles from Firestore:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchArticles();
-  }, [currentPage, articlesPerPage]);
+  }, []);
 
+  const totalArticles = articles.length;
   const totalPages = Math.ceil(totalArticles / articlesPerPage);
+  const indexOfLastArticle = currentPage * articlesPerPage;
+  const indexOfFirstArticle = indexOfLastArticle - articlesPerPage;
+  const currentArticles = articles.slice(indexOfFirstArticle, indexOfLastArticle);
 
   const paginate = (pageNumber) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
@@ -37,18 +41,9 @@ const ViewArticleList = () => {
     }
   };
 
-  const isArticlePublished = (isPublished) => {
-    return isPublished === 1;
-  };
+  const getImageSrc = (imageUrl) => imageUrl || '';
 
-  const getImageSrc = (image) => {
-  if (image?.data) {
-    const byteArray = new Uint8Array(image.data);
-    const blob = new Blob([byteArray], { type: 'image/jpeg' });
-    return URL.createObjectURL(blob); // returns a local blob URL
-  }
-  return '';
-};
+  const isArticlePublished = (published) => published === true;
 
   return (
     <Layout>
@@ -56,9 +51,7 @@ const ViewArticleList = () => {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Articles</h1>
           <div className="flex space-x-2">
-            <a href="/article" className="bg-green-500 text-white px-4 py-2 rounded-md text-sm">+ Add Article</a>
-            <button className="bg-yellow-400 text-white px-4 py-2 rounded-md text-sm">Reset</button>
-            <button className="bg-red-500 text-white px-4 py-2 rounded-md text-sm">Recycle Bin</button>
+            <a href="/" className="bg-green-500 text-white px-4 py-2 rounded-md text-sm">+ Add Article</a>
           </div>
         </div>
 
@@ -81,8 +74,14 @@ const ViewArticleList = () => {
               </tr>
             </thead>
             <tbody>
-              {articles.length > 0 ? (
-                articles.map((article, index) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="12" className="text-center py-6 text-gray-500">
+                    Loading articles...
+                  </td>
+                </tr>
+              ) : currentArticles.length > 0 ? (
+                currentArticles.map((article, index) => (
                   <tr key={article.id} className="hover:bg-gray-50">
                     <td className="py-3 px-4 border-b">
                       {(currentPage - 1) * articlesPerPage + index + 1}
@@ -91,7 +90,7 @@ const ViewArticleList = () => {
                       <label className="inline-flex relative items-center cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={isArticlePublished(article.isPublished)}
+                          checked={isArticlePublished(article.published)}
                           readOnly
                           className="sr-only peer"
                         />
@@ -100,27 +99,27 @@ const ViewArticleList = () => {
                       </label>
                     </td>
                     <td className="py-3 px-4 border-b">
-                      <img
-                        src={getImageSrc(article.image)}
-                        alt={article.title}
-                        className="w-16 h-auto object-cover"
-                      />
+                      {article.image ? (
+                        <img
+                          src={getImageSrc(article.image)}
+                          alt={article.title}
+                          className="w-16 h-auto object-cover"
+                        />
+                      ) : (
+                        "N/A"
+                      )}
                     </td>
-                    <td
-                      className="py-3 px-4 border-b"
-                      dangerouslySetInnerHTML={{ __html: article.englishDescription }}
-                    />
-                    <td
-                      className="py-3 px-4 border-b text-right"
-                      dangerouslySetInnerHTML={{ __html: article.urduDescription }}
-                    />
+                    <td className="py-3 px-4 border-b" dangerouslySetInnerHTML={{ __html: article?.BlogText?.english || "" }} />
+                    <td className="py-3 px-4 border-b text-right" dangerouslySetInnerHTML={{ __html: article?.BlogText?.urdu || "" }} />
                     <td className="py-3 px-4 border-b">{article.title}</td>
                     <td className="py-3 px-4 border-b">{article.writers}</td>
-                    <td className="py-3 px-4 border-b">{article.translator}</td>
+                    <td className="py-3 px-4 border-b">{article.translator || "-"}</td>
                     <td className="py-3 px-4 border-b">{article.language}</td>
-                    <td className="py-3 px-4 border-b">{article.views}</td>
+                    <td className="py-3 px-4 border-b">{article.views || 0}</td>
                     <td className="py-3 px-4 border-b">
-                      {new Date(article.createdOn).toLocaleDateString()}
+                      {article.createdOn?.toDate
+                        ? article.createdOn.toDate().toLocaleDateString()
+                        : "-"}
                     </td>
                     <td className="py-3 px-4 border-b">
                       <button
@@ -146,8 +145,8 @@ const ViewArticleList = () => {
         {/* Pagination */}
         <div className="flex justify-between items-center mt-4">
           <div className="text-sm text-gray-600">
-            Showing {(currentPage - 1) * articlesPerPage + 1} to{' '}
-            {Math.min(currentPage * articlesPerPage, totalArticles)} of {totalArticles} entries
+            Showing {indexOfFirstArticle + 1} to{' '}
+            {Math.min(indexOfLastArticle, totalArticles)} of {totalArticles} entries
           </div>
           <div className="flex space-x-2">
             <button

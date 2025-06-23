@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
-import firebaseConfig from '../pages/firebase/firebaseConfig';
 import Swal from 'sweetalert2';
 import { useAuth } from './AuthContext';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-
-
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+import { doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../pages/firebase/firebaseConfig'; // ✅ named modular imports
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -21,7 +14,6 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -36,16 +28,15 @@ const Login = () => {
 
     try {
       await login(formData.username, formData.password);
-      const user = firebase.auth().currentUser;
+      const user = auth.currentUser;
 
       if (user) {
-        const userRef = firebase.firestore().collection('admins').doc(user.uid);
-        const userDoc = await userRef.get();
+        const userRef = doc(db, 'admins', user.uid);
+        const userSnap = await getDoc(userRef);
 
-        if (userDoc.exists) {
-          const userData = userDoc.data();
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
           const userRole = userData.role;
-          console.log(userRole)
 
           Swal.fire({
             icon: 'success',
@@ -61,6 +52,8 @@ const Login = () => {
             case 'admin':
               navigate('/dashboard');
               break;
+            default:
+              navigate('/dashboard');
           }
         } else {
           throw new Error('No user data found');
@@ -89,7 +82,7 @@ const Login = () => {
       >
         <div className="flex justify-center mb-4">
           <img
-            src="https://static.wixstatic.com/media/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png/v1/fill/w_75,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png" // <-- replace with your actual logo path
+            src="https://static.wixstatic.com/media/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png/v1/fill/w_75,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png"
             alt="Logo"
             className="h-16 w-auto"
           />
