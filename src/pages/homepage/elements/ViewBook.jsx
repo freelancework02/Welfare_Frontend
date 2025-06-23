@@ -6,7 +6,7 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "../firebase/firebaseConfig";
+import { db } from "../../firebase/firebaseConfig";
 import Swal from "sweetalert2";
 import Layout from "../../../component/Layout";
 

@@ -45,7 +45,7 @@ import Viewkalam from "./pages/homepage/elements/Viewkalam";
 import AddLanguage from "./pages/homepage/elements/AddLanguage";
 import ViewLanguages from "./pages/homepage/elements/ViewLanguages";
 import AddBook from "./pages/homepage/elements/CreateBookPage";
-// import ViewBooks from '../src/pages/homepage/EditForms';
+import ViewBooks from '../src/pages/homepage/elements/ViewBook';
 
 const App = () => {
   return (
@@ -60,7 +60,7 @@ const App = () => {
         <Route path="/viewlang" element={<ViewLanguages />} />
         <Route path="/addlang" element={<AddLanguage />} />
         <Route path="/addbook" element={<AddBook />} />
-        {/* <Route path="/viewbook" element={<ViewBooks />} /> */}
+        <Route path="/viewbook" element={<ViewBooks />} />
         <Route path="/newdashboard" element={<NewDashboard />} />
         <Route path="/dashboard" element={<DashboardCard />} />
         <Route path="/book" element={<CreateBookPage />} />

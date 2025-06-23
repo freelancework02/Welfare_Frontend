@@ -14,6 +14,7 @@ const sidebarLinks = [
   { label: 'Add Language', icon: BookMarked, path: '/addlang' },
   { label: 'View Language', icon: BookMarked, path: '/viewlang' },
   { label: 'Add Book', icon: BookMarked, path: '/addbook' },
+  { label: 'View Book', icon: BookMarked, path: '/viewbook' },
 ];
 
 const Layout = ({ children }) => {
