@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 // import { useAuth } from "./AuthContext";
 import { Menu, X, FileText, BookMarked, PenLine } from 'lucide-react';
 
+
 const sidebarLinks = [
   { label: 'Articles', icon: FileText, path: '/' },
   { label: 'View Articles', icon: FileText, path: '/viewarticle' },
@@ -10,6 +11,9 @@ const sidebarLinks = [
   { label: 'View Kalam', icon: PenLine, path: '/viewkalam' },
   { label: 'Create Topic', icon: BookMarked, path: '/topic' },
   { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
+  { label: 'Add Language', icon: BookMarked, path: '/addlang' },
+  { label: 'View Language', icon: BookMarked, path: '/viewlang' },
+  { label: 'Add Book', icon: BookMarked, path: '/addbook' },
 ];
 
 const Layout = ({ children }) => {
