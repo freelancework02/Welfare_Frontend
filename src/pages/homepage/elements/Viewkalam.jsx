@@ -111,7 +111,7 @@ const Viewkalam = () => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <FileText className="w-6 h-6" />
-            All Articles
+            All Kalam
           </h2>
           
           <div className="flex gap-4">
@@ -277,7 +277,7 @@ const Viewkalam = () => {
                           <Edit className="w-5 h-5" />
                         </Link>
                         <Link
-                          to={`/article/${article.id}`}
+                          to={`/viewkalam/${article.id}`}
                           className="text-green-600 hover:text-green-900"
                           title="View"
                         >

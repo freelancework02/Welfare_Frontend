@@ -22,6 +22,7 @@ import { db } from "../../firebase/firebaseConfig";
 import {
   collection,
   addDoc,
+  getDocs,
   doc,
   setDoc,
   serverTimestamp
@@ -127,6 +128,66 @@ export default function CreateArticlePage() {
   //   reader.readAsDataURL(file);
   // };
 
+// const handleSave = async (isPublish) => {
+//   if (!articleTitle || !selectedLanguage || !selectedWriter) {
+//     Swal.fire({
+//       icon: "warning",
+//       title: "Incomplete Fields",
+//       text: "Please fill all required fields including title, language, and writer.",
+//     });
+//     return;
+//   }
+
+//   setIsSubmitting(true);
+
+//   try {
+//     const tagsArray = selectedTags
+//       .split(",")
+//       .map((tag) => tag.trim())
+//       .filter((tag) => tag.length > 0);
+
+//     const articleData = {
+//       slug: articleTitle.toLowerCase().replace(/\s+/g, "-"),
+//       createdOn: serverTimestamp(),
+//       modifiedOn: serverTimestamp(),
+//       title: articleTitle,
+//       published: isPublish,
+//       writers: selectedWriter,
+//       BlogText: {
+//         english: englishDescription,
+//         urdu: urduDescription,
+//       },
+//       topic: selectedTopic,
+//       tags: tagsArray,
+//       language: selectedLanguage,
+//     };
+
+//     const docRef = await addDoc(collection(db, "articlePosts"), articleData);
+
+//     await setDoc(doc(db, "articlePosts", docRef.id), {
+//       ...articleData,
+//       docId: docRef.id,
+//     });
+
+//     Swal.fire({
+//       icon: "success",
+//       title: "Article Submitted",
+//       timer: 2000,
+//     });
+
+//     setTimeout(() => window.location.reload(), 1500);
+//   } catch (error) {
+//     console.error("Error saving article:", error);
+//     setIsSubmitting(false);
+//     Swal.fire({
+//       icon: "error",
+//       title: "Submission Failed",
+//       text: error.message || "Something went wrong.",
+//     });
+//   }
+// };
+
+
 const handleSave = async (isPublish) => {
   if (!articleTitle || !selectedLanguage || !selectedWriter) {
     Swal.fire({
@@ -161,11 +222,19 @@ const handleSave = async (isPublish) => {
       language: selectedLanguage,
     };
 
-    const docRef = await addDoc(collection(db, "articlePosts"), articleData);
+    // Fetch existing document IDs
+    const snapshot = await getDocs(collection(db, "articlePosts"));
+    const existingIDs = snapshot.docs
+      .map((doc) => doc.id)
+      .filter((id) => /^\d+$/.test(id)) // keep only numeric IDs
+      .map((id) => parseInt(id, 10));
+    const nextID = existingIDs.length > 0 ? Math.max(...existingIDs) + 1 : 1;
 
-    await setDoc(doc(db, "articlePosts", docRef.id), {
+    const newDocId = nextID.toString();
+
+    await setDoc(doc(db, "articlePosts", newDocId), {
       ...articleData,
-      docId: docRef.id,
+      docId: newDocId,
     });
 
     Swal.fire({
@@ -185,7 +254,6 @@ const handleSave = async (isPublish) => {
     });
   }
 };
-
 
   return (
     <Layout>

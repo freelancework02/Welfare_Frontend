@@ -54,6 +54,20 @@ const ViewArticleList = () => {
     }
   };
 
+  const stripHtml = (html) => {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
+  const truncateText = (text, maxLength = 100) => {
+    const plainText = stripHtml(text);
+    return plainText.length > maxLength 
+      ? plainText.substring(0, maxLength) + '...' 
+      : plainText;
+  };
+
   const totalArticles = articles.length;
   const totalPages = Math.ceil(totalArticles / articlesPerPage);
   const indexOfLastArticle = currentPage * articlesPerPage;
@@ -85,8 +99,8 @@ const ViewArticleList = () => {
                 <th className="py-3 px-4 border-b text-left">Sr</th>
                 <th className="py-3 px-4 border-b text-left">Status</th>
                 <th className="py-3 px-4 border-b text-left">Image</th>
-                <th className="py-3 px-4 border-b text-left w-[400px]">English Description</th>
-                <th className="py-3 px-4 border-b text-left w-[400px]">Urdu Description</th>
+                <th className="py-3 px-4 border-b text-left">English Description</th>
+                <th className="py-3 px-4 border-b text-left">Urdu Description</th>
                 <th className="py-3 px-4 border-b text-left">Title</th>
                 <th className="py-3 px-4 border-b text-left">Writers</th>
                 <th className="py-3 px-4 border-b text-left">Translators</th>
@@ -117,8 +131,16 @@ const ViewArticleList = () => {
                         <img src={getImageSrc(article.image)} alt={article.title} className="w-16 h-auto object-cover" />
                       ) : "N/A"}
                     </td>
-                    <td className="py-3 px-4 border-b" dangerouslySetInnerHTML={{ __html: article?.BlogText?.english || "" }} />
-                    <td className="py-3 px-4 border-b text-right" dangerouslySetInnerHTML={{ __html: article?.BlogText?.urdu || "" }} />
+                    <td className="py-3 px-4 border-b max-w-[200px]">
+                      <div className="line-clamp-2">
+                        {truncateText(article?.BlogText?.english)}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 border-b max-w-[200px]">
+                      <div className="line-clamp-2 text-right">
+                        {truncateText(article?.BlogText?.urdu)}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 border-b">{article.title}</td>
                     <td className="py-3 px-4 border-b">{article.writers}</td>
                     <td className="py-3 px-4 border-b">{article.translator || "-"}</td>

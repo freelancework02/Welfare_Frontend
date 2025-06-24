@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CloudUploadIcon, FileText } from "lucide-react";
-import Layout from '../../../component/Layout'
+import { FileText } from "lucide-react";
+import Layout from '../../../component/Layout';
 import Swal from "sweetalert2";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
 
 const modules = {
     toolbar: [
@@ -33,62 +35,44 @@ const formats = [
     'link', 'image', 'video'
 ];
 
-
 const WriterUpdateForm = () => {
-
-    const { id } = useParams(); // writer ID from route
-    const [isTeamMember, setIsTeamMember] = useState(false);
-    const [profilePic, setProfilePic] = useState(null);
-    const [preview, setPreview] = useState(null);
+    const { id } = useParams();
     const [formData, setFormData] = useState({
-        name: "",
+        writerName: "",
         designation: "",
-        englishDescription: "",
-        urduDescription: ""
+        aboutWriter: ""
     });
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchWriter = async () => {
+            setIsLoading(true);
             try {
-                const res = await fetch(`https://newmmdata-backend.onrender.com/api/writers/${id}`);
-                const data = await res.json();
-                setFormData({
-                    name: data.name || "",
-                    designation: data.designation || "",
-                    englishDescription: data.englishDescription || "",
-                    urduDescription: data.urduDescription || ""
-                });
-                setIsTeamMember(data.isTeamMember || false);
-                setPreview(data.imageUrl); // assuming `imageUrl` is returned
+                const docRef = doc(db, "writers", id);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setFormData({
+                        writerName: data.writerName || "",
+                        designation: data.designation || "",
+                        aboutWriter: data.aboutWriter || ""
+                    });
+                } else {
+                    Swal.fire('Error', 'No such writer found!', 'error');
+                    navigate('/writers');
+                }
             } catch (err) {
+                console.error("Error fetching writer:", err);
                 Swal.fire('Error', 'Failed to load writer data', 'error');
+            } finally {
+                setIsLoading(false);
             }
         };
 
         fetchWriter();
-    }, [id]);
-
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.match('image.*')) {
-            Swal.fire('Error', 'Please select an image file (JPEG, PNG, etc.)', 'error');
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire('Error', 'Image size should be less than 5MB', 'error');
-            return;
-        }
-
-        setProfilePic(file);
-
-        const reader = new FileReader();
-        reader.onloadend = () => setPreview(reader.result);
-        reader.readAsDataURL(file);
-    };
+    }, [id, navigate]);
 
     const handleChange = (e) => {
         const { id, value } = e.target;
@@ -98,70 +82,67 @@ const WriterUpdateForm = () => {
         }));
     };
 
-    const handleDescriptionChange = (field, value) => {
+    const handleDescriptionChange = (value) => {
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            aboutWriter: value
         }));
     };
 
-   const handleSubmit = async (e) => {
-    e.preventDefault();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-    if (!formData.name.trim()) {
-        Swal.fire('Error', 'Please enter the writer name', 'error');
-        return;
-    }
-
-    Swal.fire({
-        title: 'Updating writer...',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    const formDataToSend = new FormData();
-    formDataToSend.append("name", formData.name);
-    formDataToSend.append("designation", formData.designation);
-    formDataToSend.append("englishDescription", formData.englishDescription);
-    formDataToSend.append("urduDescription", formData.urduDescription);
-    formDataToSend.append("isTeamMember", isTeamMember);
-    if (profilePic) {
-        formDataToSend.append("image", profilePic);
-    }
-
-    try {
-        const response = await fetch(`https://newmmdata-backend.onrender.com/api/writers/${id}`, {
-            method: "PUT",
-            body: formDataToSend,
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to update writer");
+        if (!formData.writerName.trim()) {
+            Swal.fire('Error', 'Please enter the writer name', 'error');
+            return;
         }
 
         Swal.fire({
-            icon: 'success',
-            title: 'Writer Updated Successfully!',
-            text: `Updated at: ${new Date().toLocaleString()}`,
-            timer: 2000,
-            showConfirmButton: false
-        }).then(() => {
-            navigate('/writers');
+            title: 'Updating writer...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
 
-    } catch (error) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: error.message || "Something went wrong.",
-        });
+        try {
+            const writerRef = doc(db, "writers", id);
+            const updateData = {
+                ...formData,
+                updatedAt: new Date().toISOString()
+            };
+
+            await updateDoc(writerRef, updateData);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Writer Updated Successfully!',
+                text: `Updated at: ${new Date().toLocaleString()}`,
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                navigate('/writers');
+            });
+
+        } catch (error) {
+            console.error("Error updating writer:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.message || "Something went wrong while updating the writer.",
+            });
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <Layout>
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            </Layout>
+        );
     }
-};
-
-
 
     return (
         <Layout>
@@ -174,112 +155,50 @@ const WriterUpdateForm = () => {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold tracking-tight">Update Writer</h1>
-                    <p className="text-gray-500">Edit the writer’s information</p>
+                    <p className="text-gray-500">Edit the writer's information</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     <div className="bg-white shadow-md rounded-md overflow-hidden">
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="flex flex-col items-center">
-                                <h3 className="text-base font-medium mb-4">Profile Pic</h3>
-                                <label
-                                    htmlFor="profile-upload"
-                                    className="relative border-2 border-dashed border-gray-300 rounded-full w-48 h-48 flex items-center justify-center cursor-pointer overflow-hidden group"
-                                >
-                                    {preview ? (
-                                        <img
-                                            src={preview}
-                                            alt="Preview"
-                                            className="object-cover w-full h-full rounded-full"
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center text-center p-4">
-                                            <CloudUploadIcon className="h-10 w-10 text-gray-400 mb-2" />
-                                            <p className="text-xs text-gray-500">Click to upload</p>
-                                        </div>
-                                    )}
-                                    <input
-                                        id="profile-upload"
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                    />
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-2">
+                                <label htmlFor="writerName" className="block text-sm font-medium text-gray-700">
+                                    Name <span className="text-red-500 ml-1">*</span>
                                 </label>
+                                <input
+                                    id="writerName"
+                                    value={formData.writerName}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
                             </div>
 
-                            <div className="md:col-span-2 space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-base font-medium">Team Member</h3>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            id="isTeamMember"
-                                            checked={isTeamMember}
-                                            onChange={(e) => setIsTeamMember(e.target.checked)}
-                                            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                                        />
-                                        <label htmlFor="isTeamMember" className="text-sm text-gray-700">
-                                            Check if team member
-                                        </label>
-                                    </div>
-                                </div>
+                            <div className="space-y-2">
+                                <label htmlFor="designation" className="block text-sm font-medium text-gray-700">
+                                    Designation
+                                </label>
+                                <input
+                                    id="designation"
+                                    value={formData.designation}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
 
-                                <div className="space-y-2">
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                        Name <span className="text-red-500 ml-1">*</span>
-                                    </label>
-                                    <input
-                                        id="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <FileText className="w-4 h-4" />
+                                    <label className="text-sm font-medium">About Writer</label>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <label htmlFor="designation" className="block text-sm font-medium text-gray-700">
-                                        Designation
-                                    </label>
-                                    <input
-                                        id="designation"
-                                        value={formData.designation}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <FileText className="w-4 h-4" />
-                                        <label className="text-sm font-medium">English Description</label>
-                                    </div>
-                                    <ReactQuill
-                                        theme="snow"
-                                        value={formData.englishDescription}
-                                        onChange={(value) => handleDescriptionChange("englishDescription", value)}
-                                        modules={modules}
-                                        formats={formats}
-                                        className="bg-white border rounded-lg min-h-[136px]"
-                                        style={{ direction: 'ltr', textAlign: 'left' }}
-                                    />
-                                </div>
-
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <FileText className="w-4 h-4" />
-                                        <label className="text-sm font-medium">Urdu Description</label>
-                                    </div>
-                                    <ReactQuill
-                                        theme="snow"
-                                        value={formData.urduDescription}
-                                        onChange={(value) => handleDescriptionChange("urduDescription", value)}
-                                        modules={modules}
-                                        formats={formats}
-                                        className="bg-white border rounded-lg min-h-[136px] text-right"
-                                        style={{ direction: 'rtl', textAlign: 'right' }}
-                                    />
-                                </div>
+                                <ReactQuill
+                                    theme="snow"
+                                    value={formData.aboutWriter}
+                                    onChange={handleDescriptionChange}
+                                    modules={modules}
+                                    formats={formats}
+                                    className="bg-white border rounded-lg min-h-[136px]"
+                                />
                             </div>
                         </div>
                     </div>
@@ -288,8 +207,19 @@ const WriterUpdateForm = () => {
                         <button
                             type="submit"
                             className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base flex items-center gap-2"
+                            disabled={isLoading}
                         >
-                            Update Writer
+                            {isLoading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Updating...
+                                </>
+                            ) : (
+                                "Update Writer"
+                            )}
                         </button>
                     </div>
                 </form>
@@ -298,4 +228,4 @@ const WriterUpdateForm = () => {
     )
 }
 
-export default WriterUpdateForm
+export default WriterUpdateForm;

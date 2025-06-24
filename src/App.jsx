@@ -48,6 +48,8 @@ import AddBook from "./pages/homepage/elements/CreateBookPage";
 import ViewBooks from '../src/pages/homepage/elements/ViewBook';
 import Editkalam from '../src/pages/homepage/elements/Editkalam'
 import EditArticle from '../src/pages/homepage/elements/EditArticle'
+import KalamDetail from "./pages/homepage/elements/KalamDetail";
+import ViewWriter from "./pages/homepage/elements/ViewWriter";
 
 const App = () => {
   return (
@@ -63,6 +65,7 @@ const App = () => {
         <Route path="/addlang" element={<AddLanguage />} />
         <Route path="/edit-kalam/:id" element={<Editkalam />} />
         <Route path="/edit-article/:id" element={<EditArticle />} />
+        <Route path="/viewkalam/:id" element={<KalamDetail />} />
         <Route path="/addbook" element={<AddBook />} />
         <Route path="/viewbook" element={<ViewBooks />} />
         <Route path="/newdashboard" element={<NewDashboard />} />
@@ -83,7 +86,7 @@ const App = () => {
 
         <Route path="/contact" element={<ContactList />} />
         <Route path="/writers" element={<WriterManagement />} />
-        <Route path="/writers/:id" element={<WriterDetail />} />
+        <Route path="/viewwriters/:id" element={<ViewWriter />} />
         <Route path="/writers-update/:id" element={<WriterUpdateForm />} />
         <Route path="/createwriter" element={<CreateWriterForm />} />
 
