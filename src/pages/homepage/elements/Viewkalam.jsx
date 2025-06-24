@@ -270,7 +270,7 @@ const Viewkalam = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <Link
-                          to={`/edit-article/${article.id}`}
+                          to={`/edit-kalam/${article.id}`}
                           className="text-blue-600 hover:text-blue-900"
                           title="Edit"
                         >
