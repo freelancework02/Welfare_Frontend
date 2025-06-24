@@ -21,6 +21,10 @@ import {
   doc,
   setDoc,
   serverTimestamp,
+  getDocs,
+  query,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 
 // Font registration for Quill
@@ -98,97 +102,87 @@ function Field({ label, icon, children }) {
 
 export default function CreateArticlePage() {
   const [articleTitle, setArticleTitle] = useState("");
-  const [englishDescription, setEnglishDescription] = useState("");
-  const [urduDescription, setUrduDescription] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("Naat");
+  const [selectedLanguage, setSelectedLanguage] = useState("1");
   const [selectedWriter, setSelectedWriter] = useState("");
-  const [selectedTranslator, setSelectedTranslator] = useState("");
-  const [writerDesignation, setWriterDesignation] = useState("");
   const [publicationDate, setPublicationDate] = useState(getCurrentDate());
-  const [selectedTags, setSelectedTags] = useState("");
+  const [selectedTags, setSelectedTags] = useState(["نعت"]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nextDocId, setNextDocId] = useState(0);
 
-  // State for line spacing and text contents
-  const [lineSpacing, setLineSpacing] = useState("1");
-  const [rawTextContents, setRawTextContents] = useState({
-    urdu: "",
-    roman: "",
-    english: "",
-    hindi: "",
-    arabic: "",
-    sharha: ""
-  });
-  const [displayTextContents, setDisplayTextContents] = useState({
-    urdu: "",
-    roman: "",
-    english: "",
-    hindi: "",
-    arabic: "",
-    sharha: ""
-  });
+  // Text content states
+  const [postUrdu, setPostUrdu] = useState("");
+  const [postRoman, setPostRoman] = useState("");
+  const [postEnglish, setPostEnglish] = useState("");
+  const [postHindi, setPostHindi] = useState("");
+  const [postArabic, setPostArabic] = useState("");
+  const [postSharha, setPostSharha] = useState("");
+  const [postTranslate, setPostTranslate] = useState("");
+  const [lineSetting, setLineSetting] = useState("2line");
+  const [style, setStyle] = useState("1");
+  const [lineSpacing, setLineSpacing] = useState(2); // Number of lines between spaces
 
-  // Update displayed text whenever raw text or line spacing changes
+  // Get the next document ID
   useEffect(() => {
-    const formattedContents = {};
-    for (const [lang, text] of Object.entries(rawTextContents)) {
-      formattedContents[lang] = formatTextWithLineSpacing(text);
-    }
-    setDisplayTextContents(formattedContents);
-  }, [rawTextContents, lineSpacing]);
-
-  const handleTextChange = (language, value) => {
-    setRawTextContents(prev => ({
-      ...prev,
-      [language]: value
-    }));
-  };
-
-  const formatTextWithLineSpacing = (text) => {
-    if (!text) return "";
-
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-    const spacing = parseInt(lineSpacing);
-
-    if (spacing === 1) return text;
-
-    let result = [];
-    for (let i = 0; i < lines.length; i += spacing) {
-      const chunk = lines.slice(i, i + spacing).join('\n');
-      result.push(chunk);
-      if (i + spacing < lines.length) {
-        result.push('\n\n'); // Add double line break between chunks
-      }
-    }
-
-    return result.join('');
-  };
-
-
-  function generateSearchKey(...fields) {
-    const keys = new Set();
-
-    const addSubstrings = (s) => {
-      s = s.replace(/\s+/g, '').toLowerCase();
-      for (let i = 1; i <= s.length; i++) {
-        keys.add(s.substring(0, i));
+    const getNextDocId = async () => {
+      try {
+        const q = query(collection(db, "kalamPosts"), orderBy("book", "desc"), limit(1));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const lastDoc = querySnapshot.docs[0];
+          const lastDocId = parseInt(lastDoc.id);
+          setNextDocId(lastDocId + 1);
+        } else {
+          setNextDocId(684); // Starting ID if collection is empty
+        }
+      } catch (error) {
+        console.error("Error getting next document ID:", error);
+        setNextDocId(684); // Fallback starting ID
       }
     };
 
-    fields.forEach(field => {
-      if (field) addSubstrings(field);
-    });
+    getNextDocId();
+  }, []);
 
-    return Array.from(keys);
-  }
+  // Format text with line spacing
+  const formatTextWithSpacing = (text) => {
+    if (!text) return "";
+    
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    if (lines.length === 0) return "";
+    
+    let result = [];
+    for (let i = 0; i < lines.length; i++) {
+      result.push(lines[i]);
+      if ((i + 1) % lineSpacing === 0 && i !== lines.length - 1) {
+        result.push(''); // Add empty line for spacing
+      }
+    }
+    return result.join('\n');
+  };
 
+  // Handle text change with automatic spacing
+  const handleTextChange = (setter) => (e) => {
+    const text = e.target.value;
+    const lines = text.split('\n');
+    
+    // If the last line is empty, it means user pressed enter twice
+    if (lines[lines.length - 1] === '' && lines[lines.length - 2] === '') {
+      // Remove the extra empty line to prevent double spacing
+      setter(lines.slice(0, -1).join('\n'));
+    } else {
+      setter(text);
+    }
+  };
 
   const handleSave = async (isPublish) => {
-    if (!articleTitle || !selectedLanguage || !selectedWriter) {
+    if (!articleTitle || !selectedWriter) {
       Swal.fire({
         icon: "warning",
         title: "Incomplete Fields",
-        text: "Please fill all required fields including title, language, and writer.",
+        text: "Please fill all required fields including title and writer.",
       });
       return;
     }
@@ -196,45 +190,44 @@ export default function CreateArticlePage() {
     setIsSubmitting(true);
 
     try {
-      const tagsArray = selectedTags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0);
+      // Generate slug from title
+      const slug = articleTitle
+        .replace(/[^\w\s-]/g, "") // Remove special chars
+        .replace(/\s+/g, "-") // Replace spaces with -
+        .replace(/--+/g, "-") // Replace multiple - with single -
+        .toLowerCase();
 
-      // Format all text contents with selected line spacing for saving
-      const formattedContents = {};
-      for (const [lang, text] of Object.entries(rawTextContents)) {
-        formattedContents[lang] = formatTextWithLineSpacing(text).replace(/\n\n/g, '<br><br>');
-      }
-
-      const searchKeys = generateSearchKey(articleTitle, selectedWriter, ...tagsArray);
-
-
-      const articleData = {
-        slug: articleTitle.toLowerCase().replace(/\s+/g, "-"),
-        createdOn: serverTimestamp(),
-        modifiedOn: serverTimestamp(),
-        title: articleTitle,
-        published: isPublish,
-        writers: selectedWriter,
-        BlogText: {
-          english: englishDescription,
-          urdu: urduDescription,
-          ...formattedContents
-        },
-        topic: selectedTopic,
-        tags: tagsArray,
-        language: selectedLanguage,
-        lineSpacing: lineSpacing,
-        searchKeys
+      // Format all text fields with line spacing before saving
+      const formatForSave = (text) => {
+        return text.split('\n\n').join('<br><br>').split('\n').join('<br>');
       };
 
-      const docRef = await addDoc(collection(db, "kalamPosts"), articleData);
+      const articleData = {
+        book: "Bookname",
+        description: description,
+        language: selectedLanguage,
+        lineSetting: `${lineSpacing}line`, // Update lineSetting based on spacing
+        postArabic: formatForSave(postArabic),
+        postEngilsh: formatForSave(postEnglish),
+        postHindi: formatForSave(postHindi),
+        postRoman: formatForSave(postRoman),
+        postSharha: formatForSave(postSharha),
+        postTranslate: formatForSave(postTranslate),
+        postUrdu: formatForSave(postUrdu),
+        published: isPublish,
+        slug: slug,
+        style: style,
+        tags: selectedTags,
+        title: articleTitle,
+        topic: selectedTopic,
+        writer: selectedWriter,
+        createdOn: serverTimestamp(),
+        modifiedOn: serverTimestamp(),
+      };
 
-      await setDoc(doc(db, "kalamPosts", docRef.id), {
-        ...articleData,
-        docId: docRef.id,
-      });
+      // Use the nextDocId as the document ID
+      const docRef = doc(db, "kalamPosts", nextDocId.toString());
+      await setDoc(docRef, articleData);
 
       Swal.fire({
         icon: "success",
@@ -267,7 +260,7 @@ export default function CreateArticlePage() {
               Kalam
             </Link>
             <span>&gt;</span>
-            <span className="text-foreground">Create Kalam</span>
+            <span className="text-foreground">Create Kalam (ID: {nextDocId})</span>
           </nav>
 
           <h1 className="text-2xl font-bold mb-8">Create Kalam</h1>
@@ -288,13 +281,13 @@ export default function CreateArticlePage() {
                 </Field>
 
                 <Field
-                  label="English Description"
+                  label="Description"
                   icon={<FileText className="w-4 h-4" />}
                 >
                   <ReactQuill
                     theme="snow"
-                    value={englishDescription || ""}
-                    onChange={setEnglishDescription}
+                    value={description || ""}
+                    onChange={setDescription}
                     modules={modules}
                     formats={formats}
                     className="bg-white border rounded-lg min-h-[136px]"
@@ -302,25 +295,8 @@ export default function CreateArticlePage() {
                   />
                 </Field>
 
-                <Field
-                  label="Urdu Description"
-                  icon={<FileText className="w-4 h-4" />}
-                >
-                  <ReactQuill
-                    theme="snow"
-                    value={urduDescription || ""}
-                    onChange={setUrduDescription}
-                    modules={modules}
-                    formats={formats}
-                    className="bg-white border rounded-lg min-h-[136px]"
-                    style={{ direction: "rtl", textAlign: "right" }}
-                    placeholder="اردو تفصیل یہاں درج کریں"
-                    readOnly={isSubmitting}
-                  />
-                </Field>
-
-                {/* Line spacing radio buttons */}
-                <Field label="Post Line Setting" icon={<FileText className="w-4 h-4" />}>
+                {/* Line Spacing Radio Buttons */}
+                <Field label="Line Spacing" icon={<FileText className="w-4 h-4" />}>
                   <div className="flex gap-4">
                     {[1, 2, 3, 4, 5, 6].map((num) => (
                       <label key={num} className="flex items-center gap-2">
@@ -328,8 +304,8 @@ export default function CreateArticlePage() {
                           type="radio"
                           name="lineSpacing"
                           value={num}
-                          checked={lineSpacing === num.toString()}
-                          onChange={() => setLineSpacing(num.toString())}
+                          checked={lineSpacing === num}
+                          onChange={() => setLineSpacing(num)}
                           disabled={isSubmitting}
                         />
                         {num} Line{num !== 1 ? 's' : ''}
@@ -338,70 +314,110 @@ export default function CreateArticlePage() {
                   </div>
                 </Field>
 
-                {/* Language textareas */}
-                <Field label="Post Language 1 - Urdu" icon={<FileText className="w-4 h-4" />}>
+                <Field label="Style" icon={<FileText className="w-4 h-4" />}>
+                  <select
+                    value={style}
+                    onChange={(e) => setStyle(e.target.value)}
+                    className="border rounded-lg p-2 w-full"
+                    disabled={isSubmitting}
+                  >
+                    <option value="1">Style 1</option>
+                    <option value="2">Style 2</option>
+                    <option value="3">Style 3</option>
+                  </select>
+                </Field>
+
+                {/* Text content fields */}
+                <Field label="Post Urdu" icon={<FileText className="w-4 h-4" />}>
                   <textarea
-                    value={displayTextContents.urdu}
-                    onChange={(e) => handleTextChange('urdu', e.target.value)}
+                    value={formatTextWithSpacing(postUrdu)}
+                    onChange={handleTextChange(setPostUrdu)}
                     cols="30"
-                    rows="5"
-                    className="border w-full p-2 rounded-lg"
+                    rows="10"
+                    className="border w-full p-2 rounded-lg font-urdu"
+                    style={{ 
+                      direction: "rtl", 
+                      textAlign: "right",
+                      lineHeight: "2",
+                      fontSize: "18px"
+                    }}
                     disabled={isSubmitting}
                   />
                 </Field>
 
-                <Field label="Post Language 2 - Roman" icon={<FileText className="w-4 h-4" />}>
+                <Field label="Post Roman" icon={<FileText className="w-4 h-4" />}>
                   <textarea
-                    value={displayTextContents.roman}
-                    onChange={(e) => handleTextChange('roman', e.target.value)}
+                    value={formatTextWithSpacing(postRoman)}
+                    onChange={handleTextChange(setPostRoman)}
                     cols="30"
-                    rows="5"
+                    rows="10"
                     className="border w-full p-2 rounded-lg"
+                    style={{ lineHeight: "2" }}
                     disabled={isSubmitting}
                   />
                 </Field>
 
-                <Field label="Post Language 3 - English" icon={<FileText className="w-4 h-4" />}>
+                <Field label="Post English" icon={<FileText className="w-4 h-4" />}>
                   <textarea
-                    value={displayTextContents.english}
-                    onChange={(e) => handleTextChange('english', e.target.value)}
+                    value={formatTextWithSpacing(postEnglish)}
+                    onChange={handleTextChange(setPostEnglish)}
                     cols="30"
-                    rows="5"
+                    rows="10"
                     className="border w-full p-2 rounded-lg"
+                    style={{ lineHeight: "2" }}
                     disabled={isSubmitting}
                   />
                 </Field>
 
-                <Field label="Post Language 4 - Hindi" icon={<FileText className="w-4 h-4" />}>
+                <Field label="Post Hindi" icon={<FileText className="w-4 h-4" />}>
                   <textarea
-                    value={displayTextContents.hindi}
-                    onChange={(e) => handleTextChange('hindi', e.target.value)}
+                    value={formatTextWithSpacing(postHindi)}
+                    onChange={handleTextChange(setPostHindi)}
                     cols="30"
-                    rows="5"
+                    rows="10"
                     className="border w-full p-2 rounded-lg"
+                    style={{ lineHeight: "2" }}
                     disabled={isSubmitting}
                   />
                 </Field>
 
-                <Field label="Post Language 5 - Arabic" icon={<FileText className="w-4 h-4" />}>
+                <Field label="Post Arabic" icon={<FileText className="w-4 h-4" />}>
                   <textarea
-                    value={displayTextContents.arabic}
-                    onChange={(e) => handleTextChange('arabic', e.target.value)}
+                    value={formatTextWithSpacing(postArabic)}
+                    onChange={handleTextChange(setPostArabic)}
                     cols="30"
-                    rows="5"
-                    className="border w-full p-2 rounded-lg"
-                    style={{ direction: 'rtl' }}
+                    rows="10"
+                    className="border w-full p-2 rounded-lg font-arabic"
+                    style={{ 
+                      direction: "rtl", 
+                      textAlign: "right",
+                      lineHeight: "2",
+                      fontSize: "18px"
+                    }}
                     disabled={isSubmitting}
                   />
                 </Field>
 
-                <Field label="Post Language 6 - Sharha" icon={<FileText className="w-4 h-4" />}>
+                <Field label="Post Sharha" icon={<FileText className="w-4 h-4" />}>
                   <textarea
-                    value={displayTextContents.sharha}
-                    onChange={(e) => handleTextChange('sharha', e.target.value)}
+                    value={formatTextWithSpacing(postSharha)}
+                    onChange={handleTextChange(setPostSharha)}
                     cols="30"
-                    rows="5"
+                    rows="10"
                     className="border w-full p-2 rounded-lg"
+                    style={{ lineHeight: "2" }}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field label="Post Translate" icon={<FileText className="w-4 h-4" />}>
+                  <textarea
+                    value={formatTextWithSpacing(postTranslate)}
+                    onChange={handleTextChange(setPostTranslate)}
+                    cols="30"
+                    rows="10"
+                    className="border w-full p-2 rounded-lg"
+                    style={{ lineHeight: "2" }}
                     disabled={isSubmitting}
                   />
                 </Field>
@@ -426,12 +442,9 @@ export default function CreateArticlePage() {
                     required
                     disabled={isSubmitting}
                   >
-                    <option value="">Select language</option>
-                    {["Urdu", "Roman", "English"].map((lang) => (
-                      <option key={lang} value={lang.toLowerCase()}>
-                        {lang}
-                      </option>
-                    ))}
+                    <option value="1">Urdu</option>
+                    <option value="2">English</option>
+                    <option value="3">Arabic</option>
                   </select>
                 </Field>
 
@@ -446,16 +459,6 @@ export default function CreateArticlePage() {
                   />
                 </Field>
 
-                <Field label="Translator" icon={<Users className="w-4 h-4" />}>
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={selectedTranslator}
-                    onChange={(e) => setSelectedTranslator(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
                 <Field
                   label="Tags (comma-separated)"
                   icon={<Hash className="w-4 h-4" />}
@@ -463,9 +466,9 @@ export default function CreateArticlePage() {
                   <input
                     type="text"
                     className="border rounded-lg p-2 w-full"
-                    placeholder="e.g. politics, technology, health"
-                    value={selectedTags}
-                    onChange={(e) => setSelectedTags(e.target.value)}
+                    placeholder="e.g. نعت, حمد, منقبت"
+                    value={selectedTags.join(", ")}
+                    onChange={(e) => setSelectedTags(e.target.value.split(",").map(tag => tag.trim()))}
                     disabled={isSubmitting}
                   />
                 </Field>

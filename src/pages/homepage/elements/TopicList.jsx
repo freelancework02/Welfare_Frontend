@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import Layout from '../../../component/Layout';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import React, { useState } from "react";
+import Layout from "../../../component/Layout";
+import { addDoc, collection, Timestamp, getDocs, doc , query, orderBy, limit, setDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { FileText, Type } from "lucide-react";
@@ -21,14 +21,30 @@ const modules = {
     [{ indent: "-1" }, { indent: "+1" }],
     ["link", "image", "video"],
     ["clean"],
-  ]
+  ],
 };
 
 const formats = [
-  "font", "size", "bold", "italic", "underline", "strike",
-  "color", "background", "script", "header", "align",
-  "blockquote", "code-block", "list", "bullet", "indent",
-  "link", "image", "video", "clean",
+  "font",
+  "size",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "color",
+  "background",
+  "script",
+  "header",
+  "align",
+  "blockquote",
+  "code-block",
+  "list",
+  "bullet",
+  "indent",
+  "link",
+  "image",
+  "video",
+  "clean",
 ];
 
 function Field({ label, icon, children }) {
@@ -45,11 +61,11 @@ function Field({ label, icon, children }) {
 
 const CreateTopic = () => {
   const [formData, setFormData] = useState({
-    numbering: '',
-    color: '#5a6c17', // default color
-    aboutTopic: '',
+    numbering: "",
+    color: "#5a6c17", // default color
+    aboutTopic: "",
     active: true,
-    topicName: '',
+    topicName: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,7 +74,7 @@ const CreateTopic = () => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -67,26 +83,50 @@ const CreateTopic = () => {
     setIsSubmitting(true);
 
     try {
-      await addDoc(collection(db, 'topics'), {
-        numbering: formData.numbering,
+      // Step 1: Get last numbering
+      const q = query(
+        collection(db, "topics"),
+        orderBy("numbering", "desc"),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+
+      let nextNumbering = 1; // Default if no documents exist
+      if (!querySnapshot.empty) {
+        const lastDoc = querySnapshot.docs[0];
+        const lastNumber = lastDoc.data().numbering || 0;
+        nextNumbering = lastNumber + 1;
+      }
+
+      // Step 2: Build the new topic data
+      const newTopic = {
+        numbering: nextNumbering,
         color: formData.color,
         aboutTopic: formData.aboutTopic,
         active: formData.active,
         topicName: formData.topicName,
         createdOn: Timestamp.now(),
-      });
+      };
 
-      Swal.fire('Success', 'Topic added to Firestore!', 'success');
+      // Step 3: Use custom doc ID (e.g., "1", "2", "3", ...)
+      const newDocRef = doc(db, "topics", nextNumbering.toString());
+      await setDoc(newDocRef, newTopic);
+
+      Swal.fire(
+        "Success",
+        "Topic added to Firestore with custom ID!",
+        "success"
+      );
       setFormData({
-        numbering: '',
-        color: '#5a6c17',
-        aboutTopic: '',
+        numbering: "",
+        color: "#5a6c17",
+        aboutTopic: "",
         active: true,
-        topicName: '',
+        topicName: "",
       });
     } catch (error) {
-      console.error('Error adding topic:', error);
-      Swal.fire('Error', 'Failed to add topic', 'error');
+      console.error("Error adding topic:", error);
+      Swal.fire("Error", "Failed to add topic", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -161,7 +201,7 @@ const CreateTopic = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit'}
+            {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         </form>
       </div>
