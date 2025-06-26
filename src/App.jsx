@@ -50,6 +50,8 @@ import Editkalam from '../src/pages/homepage/elements/Editkalam'
 import EditArticle from '../src/pages/homepage/elements/EditArticle'
 import KalamDetail from "./pages/homepage/elements/KalamDetail";
 import ViewWriter from "./pages/homepage/elements/ViewWriter";
+import EditTopic from './pages/homepage/elements/EditTopic';
+import EditBook from './pages/homepage/elements/EditBook';
 
 const App = () => {
   return (
@@ -60,6 +62,8 @@ const App = () => {
         <Route path="/" element={<CreateArticlePage />} />
         <Route path="/kalam" element={<Createkalam />} />
         <Route path="/viewtopics" element={<ViewTopics />} />
+        <Route path="/viewtopics/edit/:id" element={<EditTopic />} />
+
         <Route path="/viewkalam" element={<Viewkalam />} />
         <Route path="/viewlang" element={<ViewLanguages />} />
         <Route path="/addlang" element={<AddLanguage />} />
@@ -68,6 +72,7 @@ const App = () => {
         <Route path="/viewkalam/:id" element={<KalamDetail />} />
         <Route path="/addbook" element={<AddBook />} />
         <Route path="/viewbook" element={<ViewBooks />} />
+        <Route path="/edit-book/:id" element={<EditBook />} />
         <Route path="/newdashboard" element={<NewDashboard />} />
         <Route path="/dashboard" element={<DashboardCard />} />
         <Route path="/book" element={<CreateBookPage />} />

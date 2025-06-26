@@ -1,23 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "../../../component/Layout";
 import {
-  collection,
-  Timestamp,
-  getDocs,
-  query,
-  orderBy,
-  limit,
   doc,
-  setDoc,
+  getDoc,
+  updateDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
+import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import ReactQuill from "react-quill";
+import ReactQuill, { Quill } from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import Quill from "quill"; // ✅ Needed for custom fonts
 import { FileText, Type } from "lucide-react";
 
-// ✅ Font Whitelist and Registration
+// Font registration
 const Font = Quill.import("formats/font");
 Font.whitelist = [
   "sans-serif",
@@ -33,10 +29,10 @@ Font.whitelist = [
 ];
 Quill.register(Font, true);
 
-// ✅ Quill Editor Config
+// Quill Editor Config
 const modules = {
   toolbar: [
-    [{ font: Font.whitelist }, { size: [] }],
+    [{ font: [] }, { size: [] }],
     ["bold", "italic", "underline", "strike"],
     [{ color: [] }, { background: [] }],
     [{ script: "sub" }, { script: "super" }],
@@ -85,7 +81,9 @@ function Field({ label, icon, children }) {
   );
 }
 
-const CreateTopic = () => {
+const EditTopic = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     numbering: "",
     color: "#5a6c17",
@@ -93,8 +91,33 @@ const CreateTopic = () => {
     active: true,
     topicName: "",
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchTopic = async () => {
+      try {
+        const docRef = doc(db, "topics", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFormData({
+            numbering: docSnap.data().numbering || "",
+            color: docSnap.data().color || "#5a6c17",
+            aboutTopic: docSnap.data().aboutTopic || "",
+            active: docSnap.data().active ?? true,
+            topicName: docSnap.data().topicName || "",
+          });
+        } else {
+          Swal.fire("Not Found", "Topic not found", "warning");
+          navigate("/admin/topic/view");
+        }
+      } catch (error) {
+        console.error("Error fetching topic:", error);
+        Swal.fire("Error", "Failed to load topic", "error");
+      }
+    };
+
+    fetchTopic();
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -109,43 +132,17 @@ const CreateTopic = () => {
     setIsSubmitting(true);
 
     try {
-      const q = query(
-        collection(db, "topics"),
-        orderBy("numbering", "desc"),
-        limit(1)
-      );
-      const querySnapshot = await getDocs(q);
-
-      let nextNumbering = 1;
-      if (!querySnapshot.empty) {
-        const lastDoc = querySnapshot.docs[0];
-        const lastNumber = lastDoc.data().numbering || 0;
-        nextNumbering = lastNumber + 1;
-      }
-
-      const newTopic = {
-        numbering: nextNumbering,
-        color: formData.color,
-        aboutTopic: formData.aboutTopic,
-        active: formData.active,
-        topicName: formData.topicName,
-        createdOn: Timestamp.now(),
-      };
-
-      const newDocRef = doc(db, "topics", nextNumbering.toString());
-      await setDoc(newDocRef, newTopic);
-
-      Swal.fire("Success", "Topic added successfully!", "success");
-      setFormData({
-        numbering: "",
-        color: "#5a6c17",
-        aboutTopic: "",
-        active: true,
-        topicName: "",
+      const topicRef = doc(db, "topics", id);
+      await updateDoc(topicRef, {
+        ...formData,
+        updatedOn: Timestamp.now(),
       });
+
+      Swal.fire("Success", "Topic updated successfully!", "success");
+      navigate("/admin/topic/view");
     } catch (error) {
-      console.error("Error adding topic:", error);
-      Swal.fire("Error", "Failed to add topic", "error");
+      console.error("Error updating topic:", error);
+      Swal.fire("Error", "Failed to update topic", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +151,7 @@ const CreateTopic = () => {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow mt-8">
-        <h2 className="text-2xl font-bold mb-6">Add New Topic</h2>
+        <h2 className="text-2xl font-bold mb-6">Edit Topic</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <Field label="Numbering" icon={<Type className="w-4 h-4" />}>
             <input
@@ -163,7 +160,7 @@ const CreateTopic = () => {
               value={formData.numbering}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded px-3 py-2"
-              required
+              disabled
             />
           </Field>
 
@@ -220,7 +217,7 @@ const CreateTopic = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Submitting..." : "Submit"}
+            {isSubmitting ? "Updating..." : "Update Topic"}
           </button>
         </form>
       </div>
@@ -228,4 +225,4 @@ const CreateTopic = () => {
   );
 };
 
-export default CreateTopic;
+export default EditTopic;

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../../component/Layout';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from "../../firebase/firebaseConfig";
-import { FileText, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { collection, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase/firebaseConfig';
+import { FileText, Search, ChevronUp, ChevronDown, Pencil, Trash } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 const ViewTopics = () => {
   const [topics, setTopics] = useState([]);
@@ -11,6 +13,7 @@ const ViewTopics = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'createdOn', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -18,17 +21,17 @@ const ViewTopics = () => {
         const topicsCollection = collection(db, 'topics');
         const q = query(topicsCollection, orderBy(sortConfig.key, sortConfig.direction));
         const querySnapshot = await getDocs(q);
-        
-        const topicsData = querySnapshot.docs.map(doc => ({
+
+        const topicsData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-          createdOn: doc.data().createdOn?.toDate().toLocaleString() || 'N/A'
+          createdOn: doc.data().createdOn?.toDate().toLocaleString() || 'N/A',
         }));
-        
+
         setTopics(topicsData);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching topics: ", error);
+        console.error('Error fetching topics: ', error);
         setLoading(false);
       }
     };
@@ -44,13 +47,33 @@ const ViewTopics = () => {
     setSortConfig({ key, direction });
   };
 
-  const filteredTopics = topics.filter(topic => 
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This topic will be permanently deleted!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'topics', id));
+        setTopics((prev) => prev.filter((topic) => topic.id !== id));
+        Swal.fire('Deleted!', 'Topic has been deleted.', 'success');
+      } catch (error) {
+        console.error('Error deleting topic: ', error);
+        Swal.fire('Error', 'Failed to delete topic.', 'error');
+      }
+    }
+  };
+
+  const filteredTopics = topics.filter((topic) =>
     topic.topicName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     topic.numbering.toLowerCase().includes(searchTerm.toLowerCase()) ||
     topic.aboutTopic.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredTopics.slice(indexOfFirstItem, indexOfLastItem);
@@ -94,110 +117,70 @@ const ViewTopics = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => requestSort('numbering')}
-                >
-                  <div className="flex items-center">
-                    Number
-                    {sortConfig.key === 'numbering' && (
-                      sortConfig.direction === 'asc' ? 
-                        <ChevronUp className="ml-1 h-4 w-4" /> : 
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                    )}
-                  </div>
+                <th onClick={() => requestSort('numbering')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Number {sortConfig.key === 'numbering' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
                 </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => requestSort('topicName')}
-                >
-                  <div className="flex items-center">
-                    Topic Name
-                    {sortConfig.key === 'topicName' && (
-                      sortConfig.direction === 'asc' ? 
-                        <ChevronUp className="ml-1 h-4 w-4" /> : 
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                    )}
-                  </div>
+                <th onClick={() => requestSort('topicName')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Topic Name {sortConfig.key === 'topicName' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
                 </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Color
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
+                <th onClick={() => requestSort('createdOn')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Created On {sortConfig.key === 'createdOn' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
                 </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => requestSort('createdOn')}
-                >
-                  <div className="flex items-center">
-                    Created On
-                    {sortConfig.key === 'createdOn' && (
-                      sortConfig.direction === 'asc' ? 
-                        <ChevronUp className="ml-1 h-4 w-4" /> : 
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                    )}
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Status
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentItems.length > 0 ? (
                 currentItems.map((topic) => (
                   <tr key={topic.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{topic.numbering}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{topic.topicName}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{topic.numbering}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{topic.topicName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div 
-                        className="h-6 w-6 rounded-full border border-gray-300" 
+                      <div
+                        className="h-6 w-6 rounded-full border border-gray-300"
                         style={{ backgroundColor: topic.color }}
                         title={topic.color}
                       ></div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{topic.createdOn}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{topic.createdOn}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${topic.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${topic.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {topic.active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap flex gap-2">
+                      <button
+                        onClick={() => navigate(`/viewtopics/edit/${topic.id}`)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(topic.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Delete"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                    No topics found
-                  </td>
+                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">No topics found</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
         {filteredTopics.length > itemsPerPage && (
           <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(indexOfLastItem, filteredTopics.length)}
-              </span>{' '}
-              of <span className="font-medium">{filteredTopics.length}</span> results
+              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredTopics.length)}</span> of <span className="font-medium">{filteredTopics.length}</span> results
             </div>
             <div className="flex space-x-2">
               <button
@@ -207,7 +190,7 @@ const ViewTopics = () => {
               >
                 Previous
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
                 <button
                   key={number}
                   onClick={() => paginate(number)}

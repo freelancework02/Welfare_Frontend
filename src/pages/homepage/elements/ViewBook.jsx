@@ -9,6 +9,7 @@ import {
 import { db } from "../../firebase/firebaseConfig";
 import Swal from "sweetalert2";
 import Layout from "../../../component/Layout";
+import { useNavigate } from "react-router-dom";
 
 export default function ViewBooks() {
   const [books, setBooks] = useState([]);
@@ -59,6 +60,8 @@ export default function ViewBooks() {
     }
   };
 
+  const navigate = useNavigate();
+
   return (
     <Layout>
     <div className="max-w-5xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
@@ -107,10 +110,7 @@ export default function ViewBooks() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    setEditId(book.id);
-                    setEditData(book);
-                  }}
+                 onClick={() => navigate(`/edit-book/${book.id}`)}
                   className="bg-yellow-500 text-white px-3 py-1 rounded"
                 >
                   Edit
