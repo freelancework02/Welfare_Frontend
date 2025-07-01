@@ -8,6 +8,8 @@ import {
   Users,
   Globe,
   Hash,
+  Layers,
+  Grid,
 } from "lucide-react";
 // import Layout from "../../../component/Layout";
 import axios from "axios";
@@ -90,12 +92,12 @@ const formats = [
   "clean",
 ];
 
-function Field({ label, icon, children }) {
+function Field({ label, icon, children, required }) {
   return (
     <div>
       <label className="text-sm font-medium mb-2 flex items-center gap-2">
         {icon}
-        {label}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
     </div>
@@ -103,157 +105,146 @@ function Field({ label, icon, children }) {
 }
 
 export default function CreateArticlePage() {
-  // const fileInputRef = useRef();
-  // const [uploadedImageFile, setUploadedImageFile] = useState(null);
-  // const [uploadedImageURL, setUploadedImageURL] = useState(null);
-  const [articleTitle, setArticleTitle] = useState("");
-  const [englishDescription, setEnglishDescription] = useState("");
-  const [urduDescription, setUrduDescription] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("");
-  const [selectedWriter, setSelectedWriter] = useState("");
-  const [selectedTranslator, setSelectedTranslator] = useState("");
-  const [writerDesignation, setWriterDesignation] = useState("");
-  const [publicationDate, setPublicationDate] = useState(getCurrentDate());
-  const [selectedTags, setSelectedTags] = useState("");
+  const [title, setTitle] = useState("");
+  const [writerId, setWriterId] = useState("");
+  const [writerName, setWriterName] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [thumbnailURL, setThumbnailURL] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [contentUrdu, setContentUrdu] = useState("");
+  const [contentEnglish, setContentEnglish] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [sectionName, setSectionName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef();
 
-  // const handleImageUpload = (e) => {
-  //   const file = e.target.files[0];
-  //   if (!file) return;
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  //   setUploadedImageFile(file);
-  //   const reader = new FileReader();
-  //   reader.onloadend = () => setUploadedImageURL(reader.result);
-  //   reader.readAsDataURL(file);
-  // };
+    setImageFile(file);
+    const previewURL = URL.createObjectURL(file);
+    setThumbnailURL(previewURL);
+  };
 
-// const handleSave = async (isPublish) => {
-//   if (!articleTitle || !selectedLanguage || !selectedWriter) {
-//     Swal.fire({
-//       icon: "warning",
-//       title: "Incomplete Fields",
-//       text: "Please fill all required fields including title, language, and writer.",
-//     });
-//     return;
-//   }
+  const handleSave = async () => {
+    try {
+      setIsSubmitting(true);
+      let finalThumbnailURL = null;
+      
+      // If there's an image to upload
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        
+        try {
+          const uploadResponse = await axios.post('https://updated-naatacademy.onrender.com/api/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+          
+          finalThumbnailURL = uploadResponse.data.imageUrl;
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          Swal.fire({
+            icon: "error",
+            title: "Image Upload Failed",
+            text: "Failed to upload image. Please try again.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      // Validate required fields
+      if (!title || !writerId || !categoryId) {
+        Swal.fire({
+          icon: "warning",
+          title: "Incomplete Fields",
+          text: "Please fill all required fields (Title, Writer ID, and Category ID).",
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
-//   setIsSubmitting(true);
+      // Ensure WriterID and CategoryID are numbers
+      const articleData = {
+        Title: title,
+        WriterID: parseInt(writerId),
+        WriterName: writerName,
+        CategoryID: parseInt(categoryId),
+        CategoryName: categoryName,
+        ThumbnailURL: finalThumbnailURL,
+        ContentUrdu: contentUrdu,
+        ContentEnglish: contentEnglish,
+        GroupID: groupId ? parseInt(groupId) : null,
+        GroupName: groupName,
+        SectionID: sectionId ? parseInt(sectionId) : null,
+        SectionName: sectionName
+      };
 
-//   try {
-//     const tagsArray = selectedTags
-//       .split(",")
-//       .map((tag) => tag.trim())
-//       .filter((tag) => tag.length > 0);
+      console.log('Sending article data:', articleData);
+      
+      // Create article
+      const response = await axios.post('https://updated-naatacademy.onrender.com/api/articles', articleData);
+      
+      if (response.data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: "Article created successfully!",
+          timer: 2000
+        });
+        
+        // Reset form
+        setTimeout(() => {
+          setTitle("");
+          setWriterId("");
+          setWriterName("");
+          setCategoryId("");
+          setCategoryName("");
+          setThumbnailURL("");
+          setImageFile(null);
+          setContentUrdu("");
+          setContentEnglish("");
+          setGroupId("");
+          setGroupName("");
+          setSectionId("");
+          setSectionName("");
+          setIsSubmitting(false);
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || 'Failed to create article');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      let errorMessage = 'Something went wrong while creating the article.';
+      
+      if (error.response?.data) {
+        console.error('Server error details:', error.response.data);
+        errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+        
+        // Handle specific SQL errors
+        if (error.response.data.sqlError) {
+          console.error('SQL Error:', error.response.data.sqlError);
+          if (error.response.data.sqlError.includes("doesn't exist")) {
+            errorMessage = "Database configuration error. Please contact support.";
+          }
+        }
+      }
 
-//     const articleData = {
-//       slug: articleTitle.toLowerCase().replace(/\s+/g, "-"),
-//       createdOn: serverTimestamp(),
-//       modifiedOn: serverTimestamp(),
-//       title: articleTitle,
-//       published: isPublish,
-//       writers: selectedWriter,
-//       BlogText: {
-//         english: englishDescription,
-//         urdu: urduDescription,
-//       },
-//       topic: selectedTopic,
-//       tags: tagsArray,
-//       language: selectedLanguage,
-//     };
-
-//     const docRef = await addDoc(collection(db, "articlePosts"), articleData);
-
-//     await setDoc(doc(db, "articlePosts", docRef.id), {
-//       ...articleData,
-//       docId: docRef.id,
-//     });
-
-//     Swal.fire({
-//       icon: "success",
-//       title: "Article Submitted",
-//       timer: 2000,
-//     });
-
-//     setTimeout(() => window.location.reload(), 1500);
-//   } catch (error) {
-//     console.error("Error saving article:", error);
-//     setIsSubmitting(false);
-//     Swal.fire({
-//       icon: "error",
-//       title: "Submission Failed",
-//       text: error.message || "Something went wrong.",
-//     });
-//   }
-// };
-
-
-const handleSave = async (isPublish) => {
-  if (!articleTitle || !selectedLanguage || !selectedWriter) {
-    Swal.fire({
-      icon: "warning",
-      title: "Incomplete Fields",
-      text: "Please fill all required fields including title, language, and writer.",
-    });
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    const tagsArray = selectedTags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-
-    const articleData = {
-      slug: articleTitle.toLowerCase().replace(/\s+/g, "-"),
-      createdOn: serverTimestamp(),
-      modifiedOn: serverTimestamp(),
-      title: articleTitle,
-      published: isPublish,
-      writers: selectedWriter,
-      BlogText: {
-        english: englishDescription,
-        urdu: urduDescription,
-      },
-      topic: selectedTopic,
-      tags: tagsArray,
-      language: selectedLanguage,
-    };
-
-    // Fetch existing document IDs
-    const snapshot = await getDocs(collection(db, "articlePosts"));
-    const existingIDs = snapshot.docs
-      .map((doc) => doc.id)
-      .filter((id) => /^\d+$/.test(id)) // keep only numeric IDs
-      .map((id) => parseInt(id, 10));
-    const nextID = existingIDs.length > 0 ? Math.max(...existingIDs) + 1 : 1;
-
-    const newDocId = nextID.toString();
-
-    await setDoc(doc(db, "articlePosts", newDocId), {
-      ...articleData,
-      docId: newDocId,
-    });
-
-    Swal.fire({
-      icon: "success",
-      title: "Article Submitted",
-      timer: 2000,
-    });
-
-    setTimeout(() => window.location.reload(), 1500);
-  } catch (error) {
-    console.error("Error saving article:", error);
-    setIsSubmitting(false);
-    Swal.fire({
-      icon: "error",
-      title: "Submission Failed",
-      text: error.message || "Something went wrong.",
-    });
-  }
-};
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: errorMessage,
+      });
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Layout>
@@ -274,76 +265,72 @@ const handleSave = async (isPublish) => {
           <h1 className="text-2xl font-bold mb-8">Create Article</h1>
 
           <div className="bg-slate-50 rounded-lg p-8">
-            {/* <section className="mb-6">
-              <label className="text-sm font-medium mb-2 block">
-                Featured Image
-              </label>
-              <div className="max-w-md mx-auto">
-                <div
-                  className="border border-dashed rounded-lg p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition"
-                  onClick={() => fileInputRef.current.click()}
-                >
-                  {uploadedImageURL ? (
-                    <img
-                      src={uploadedImageURL}
-                      alt="Uploaded Preview"
-                      className="w-60 h-60 object-cover rounded-md"
+            <section className="mb-6">
+              <Field label="Thumbnail Image" icon={<ImageIcon className="w-4 h-4" />}>
+                <div className="max-w-md">
+                  <div
+                    className="border border-dashed rounded-lg p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:border-gray-400 transition"
+                    onClick={() => fileInputRef.current.click()}
+                  >
+                    {thumbnailURL ? (
+                      <img
+                        src={thumbnailURL}
+                        alt="Thumbnail Preview"
+                        className="w-60 h-60 object-cover rounded-md"
+                      />
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 mb-4 text-muted-foreground">
+                          <ImageIcon className="w-full h-full" />
+                        </div>
+                        <p className="text-base mb-1">Drop your image or click to browse</p>
+                        <p className="text-sm text-muted-foreground mb-4">PNG, JPG, GIF (max 5MB)</p>
+                        <button
+                          type="button"
+                          className="border px-4 py-2 rounded-md text-sm bg-transparent border-gray-400 hover:border-gray-500"
+                        >
+                          Browse Files
+                        </button>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      style={{ display: "none" }}
+                      accept="image/*"
+                      onChange={handleImageUpload}
                     />
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 mb-4 text-muted-foreground">
-                        <ImageIcon className="w-full h-full" />
-                      </div>
-                      <p className="text-base mb-1">
-                        Drop your image or click to browse
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        PNG, JPG, GIF (max 5MB)
-                      </p>
-                      <button
-                        type="button"
-                        className="border px-4 py-2 rounded-md text-sm bg-transparent border-gray-400 hover:border-gray-500"
-                      >
-                        Browse Files
-                      </button>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: "none" }}
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
+                  </div>
                 </div>
-              </div>
-            </section> */}
+              </Field>
+            </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
                 <Field
                   label="Article Title"
                   icon={<Type className="w-4 h-4" />}
+                  required
                 >
                   <input
                     type="text"
                     placeholder="Enter title"
                     className="border rounded-lg p-2 w-full"
-                    value={articleTitle}
-                    onChange={(e) => setArticleTitle(e.target.value)}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     required
                     disabled={isSubmitting}
                   />
                 </Field>
 
                 <Field
-                  label="English Description"
+                  label="English Content"
                   icon={<FileText className="w-4 h-4" />}
                 >
                   <ReactQuill
                     theme="snow"
-                    value={englishDescription || ""}
-                    onChange={setEnglishDescription}
+                    value={contentEnglish}
+                    onChange={setContentEnglish}
                     modules={modules}
                     formats={formats}
                     className="bg-white border rounded-lg min-h-[136px]"
@@ -352,96 +339,127 @@ const handleSave = async (isPublish) => {
                 </Field>
 
                 <Field
-                  label="Urdu Description"
+                  label="Urdu Content"
                   icon={<FileText className="w-4 h-4" />}
                 >
                   <ReactQuill
                     theme="snow"
-                    value={urduDescription || ""}
-                    onChange={setUrduDescription}
+                    value={contentUrdu}
+                    onChange={setContentUrdu}
                     modules={modules}
                     formats={formats}
                     className="bg-white border rounded-lg min-h-[136px]"
                     style={{ direction: "rtl", textAlign: "right" }}
-                    placeholder="اردو تفصیل یہاں درج کریں"
                     readOnly={isSubmitting}
                   />
                 </Field>
               </div>
 
               <div className="space-y-6">
-                <Field label="Topic" icon={<FileText className="w-4 h-4" />}>
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={selectedTopic}
-                    onChange={(e) => setSelectedTopic(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field label="Language" icon={<Globe className="w-4 h-4" />}>
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="border rounded-lg p-2 w-full"
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="">Select language</option>
-                    {["Urdu", "Roman", "English"].map((lang) => (
-                      <option key={lang} value={lang.toLowerCase()}>
-                        {lang}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Writer" icon={<Users className="w-4 h-4" />}>
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={selectedWriter}
-                    onChange={(e) => setSelectedWriter(e.target.value)}
-                    required
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field label="Translator" icon={<Users className="w-4 h-4" />}>
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={selectedTranslator}
-                    onChange={(e) => setSelectedTranslator(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field
-                  label="Tags (comma-separated)"
-                  icon={<Hash className="w-4 h-4" />}
+                <Field 
+                  label="Writer ID" 
+                  icon={<Users className="w-4 h-4" />}
+                  required
                 >
                   <input
                     type="text"
                     className="border rounded-lg p-2 w-full"
-                    placeholder="e.g. politics, technology, health"
-                    value={selectedTags}
-                    onChange={(e) => setSelectedTags(e.target.value)}
+                    value={writerId}
+                    onChange={(e) => setWriterId(e.target.value)}
+                    required
                     disabled={isSubmitting}
                   />
                 </Field>
 
-                <Field
-                  label="Publication Date"
-                  icon={<CalendarIcon className="w-4 h-4" />}
+                <Field 
+                  label="Writer Name" 
+                  icon={<Users className="w-4 h-4" />}
                 >
                   <input
-                    type="date"
-                    value={publicationDate}
-                    onChange={(e) => setPublicationDate(e.target.value)}
+                    type="text"
                     className="border rounded-lg p-2 w-full"
+                    value={writerName}
+                    onChange={(e) => setWriterName(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field 
+                  label="Category ID" 
+                  icon={<Grid className="w-4 h-4" />}
+                  required
+                >
+                  <input
+                    type="text"
+                    className="border rounded-lg p-2 w-full"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
                     required
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field 
+                  label="Category Name" 
+                  icon={<Grid className="w-4 h-4" />}
+                >
+                  <input
+                    type="text"
+                    className="border rounded-lg p-2 w-full"
+                    value={categoryName}
+                    onChange={(e) => setCategoryName(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field 
+                  label="Group ID" 
+                  icon={<Layers className="w-4 h-4" />}
+                >
+                  <input
+                    type="text"
+                    className="border rounded-lg p-2 w-full"
+                    value={groupId}
+                    onChange={(e) => setGroupId(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field 
+                  label="Group Name" 
+                  icon={<Layers className="w-4 h-4" />}
+                >
+                  <input
+                    type="text"
+                    className="border rounded-lg p-2 w-full"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field 
+                  label="Section ID" 
+                  icon={<Grid className="w-4 h-4" />}
+                >
+                  <input
+                    type="text"
+                    className="border rounded-lg p-2 w-full"
+                    value={sectionId}
+                    onChange={(e) => setSectionId(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+
+                <Field 
+                  label="Section Name" 
+                  icon={<Grid className="w-4 h-4" />}
+                >
+                  <input
+                    type="text"
+                    className="border rounded-lg p-2 w-full"
+                    value={sectionName}
+                    onChange={(e) => setSectionName(e.target.value)}
                     disabled={isSubmitting}
                   />
                 </Field>
