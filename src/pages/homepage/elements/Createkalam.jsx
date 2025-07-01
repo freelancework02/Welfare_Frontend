@@ -9,6 +9,10 @@ import {
   Users,
   Globe,
   Hash,
+  Bookmark,
+  BookOpen,
+  Star,
+  CheckCircle,
 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -26,6 +30,7 @@ import {
   orderBy,
   limit,
 } from "firebase/firestore";
+import axios from "axios";
 
 // Font registration for Quill
 const Font = Quill.import("formats/font");
@@ -103,13 +108,22 @@ function Field({ label, icon, children }) {
 export default function CreateArticlePage() {
   const [articleTitle, setArticleTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("Naat");
-  const [selectedLanguage, setSelectedLanguage] = useState("1");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("urdu");
   const [selectedWriter, setSelectedWriter] = useState("");
   const [publicationDate, setPublicationDate] = useState(getCurrentDate());
-  const [selectedTags, setSelectedTags] = useState(["نعت"]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nextDocId, setNextDocId] = useState(0);
+  const [selectedGroups, setSelectedGroups] = useState([]);
+  const [selectedSections, setSelectedSections] = useState([]);
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
+
+  // Data states
+  const [writers, setWriters] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [sections, setSections] = useState([]);
 
   // Text content states
   const [postUrdu, setPostUrdu] = useState("");
@@ -123,8 +137,29 @@ export default function CreateArticlePage() {
   const [style, setStyle] = useState("1");
   const [lineSpacing, setLineSpacing] = useState(2); // Number of lines between spaces
 
-  // Get the next document ID
+  // New states for single-select dropdowns
+  const [groupId, setGroupId] = useState("");
+  const [sectionId, setSectionId] = useState("");
+
+  // Fetch data from API
   useEffect(() => {
+    axios.get("https://naatacadmey.onrender.com/api/writers")
+      .then(res => setWriters(res.data))
+      .catch(() => setWriters([]));
+    
+    axios.get("https://naatacadmey.onrender.com/api/categories")
+      .then(res => setCategories(res.data))
+      .catch(() => setCategories([]));
+    
+    axios.get("https://naatacadmey.onrender.com/api/groups")
+      .then(res => setGroups(res.data))
+      .catch(() => setGroups([]));
+    
+    axios.get("https://naatacadmey.onrender.com/api/sections")
+      .then(res => setSections(res.data))
+      .catch(() => setSections([]));
+
+    // Get the next document ID
     const getNextDocId = async () => {
       try {
         const q = query(collection(db, "kalamPosts"), orderBy("book", "desc"), limit(1));
@@ -178,72 +213,104 @@ export default function CreateArticlePage() {
   };
 
   const handleSave = async (isPublish) => {
-    if (!articleTitle || !selectedWriter) {
+    if (!articleTitle || !selectedWriter || !selectedCategory) {
       Swal.fire({
         icon: "warning",
         title: "Incomplete Fields",
-        text: "Please fill all required fields including title and writer.",
+        text: "Please fill all required fields including title, writer and category.",
       });
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     try {
-      // Generate slug from title
-      const slug = articleTitle
-        .replace(/[^\w\s-]/g, "") // Remove special chars
-        .replace(/\s+/g, "-") // Replace spaces with -
-        .replace(/--+/g, "-") // Replace multiple - with single -
-        .toLowerCase();
-
-      // Format all text fields with line spacing before saving
-      const formatForSave = (text) => {
-        return text.split('\n\n').join('<br><br>').split('\n').join('<br>');
+      // Find the selected objects from their IDs
+      const selectedWriterObj = writers.find(w => String(w._id) === String(selectedWriter));
+      const selectedCategoryObj = categories.find(c => String(c._id) === String(selectedCategory));
+      const selectedGroupObj = groups.find(g => String(g._id) === String(groupId));
+      const selectedSectionObj = sections.find(s => String(s._id) === String(sectionId));
+  
+      // Prepare the payload with proper field names matching backend expectations
+      const payload = {
+        Title: articleTitle,
+        WriterID: String(selectedWriter), // Ensure string conversion
+        WriterName: selectedWriterObj?.Name || selectedWriterObj?.name || "",
+        CategoryID: String(selectedCategory),
+        CategoryName: selectedCategoryObj?.Name || selectedCategoryObj?.name || "",
+        ContentUrdu: formatTextWithSpacing(postUrdu),
+        ContentRomanUrdu: formatTextWithSpacing(postRoman),
+        ContentArabic: formatTextWithSpacing(postArabic),
+        ContentEnglish: formatTextWithSpacing(postEnglish),
+        ContentHindi: formatTextWithSpacing(postHindi),
+        ContentSharha: formatTextWithSpacing(postSharha),
+        ContentTranslate: formatTextWithSpacing(postTranslate),
+        GroupID: groupId ? String(groupId) : null,
+        GroupName: selectedGroupObj?.GroupName || selectedGroupObj?.name || "",
+        SectionID: sectionId ? String(sectionId) : null,
+        SectionName: selectedSectionObj?.SectionName || selectedSectionObj?.name || "",
+        IsFeatured: isFeatured ? 1 : 0,
+        IsSelected: isSelected ? 1 : 0,
+        PublicationDate: publicationDate,
+        Language: selectedLanguage,
+        Status: isPublish ? "published" : "draft"
       };
-
-      const articleData = {
-        book: "Bookname",
-        description: description,
-        language: selectedLanguage,
-        lineSetting: `${lineSpacing}line`, // Update lineSetting based on spacing
-        postArabic: formatForSave(postArabic),
-        postEngilsh: formatForSave(postEnglish),
-        postHindi: formatForSave(postHindi),
-        postRoman: formatForSave(postRoman),
-        postSharha: formatForSave(postSharha),
-        postTranslate: formatForSave(postTranslate),
-        postUrdu: formatForSave(postUrdu),
-        published: isPublish,
-        slug: slug,
-        style: style,
-        tags: selectedTags,
-        title: articleTitle,
-        topic: selectedTopic,
-        writer: selectedWriter,
-        createdOn: serverTimestamp(),
-        modifiedOn: serverTimestamp(),
-      };
-
-      // Use the nextDocId as the document ID
-      const docRef = doc(db, "kalamPosts", nextDocId.toString());
-      await setDoc(docRef, articleData);
-
-      Swal.fire({
-        icon: "success",
-        title: "Kalam Submitted",
-        timer: 2000,
-      });
-
-      setTimeout(() => window.location.reload(), 1500);
+  
+      // Debug log to verify payload before sending
+      console.log("Submitting payload:", payload);
+  
+      const response = await axios.post("http://localhost:5000/api/kalaam", payload);
+  
+      if (response.data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Kalaam Submitted",
+          text: `Kalaam ${isPublish ? "published" : "saved as draft"} successfully!`,
+          timer: 2000
+        });
+  
+        // Reset form after successful submission
+        setArticleTitle("");
+        setDescription("");
+        setSelectedCategory("");
+        setSelectedWriter("");
+        setPostUrdu("");
+        setPostRoman("");
+        setPostEnglish("");
+        setPostHindi("");
+        setPostArabic("");
+        setPostSharha("");
+        setPostTranslate("");
+        setGroupId("");
+        setSectionId("");
+        setIsFeatured(false);
+        setIsSelected(false);
+        setPublicationDate(getCurrentDate());
+        
+        // Get new document ID for next submission
+        const q = query(collection(db, "kalamPosts"), orderBy("book", "desc"), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const lastDoc = querySnapshot.docs[0];
+          setNextDocId(parseInt(lastDoc.id) + 1);
+        }
+      } else {
+        throw new Error(response.data.message || 'Failed to submit kalaam');
+      }
     } catch (error) {
-      console.error("Error saving article:", error);
-      setIsSubmitting(false);
+      console.error("Submission error:", error);
+      let errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        "Failed to submit kalaam. Please try again.";
+  
       Swal.fire({
         icon: "error",
         title: "Submission Failed",
-        text: error.message || "Something went wrong.",
+        text: errorMessage,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -312,19 +379,6 @@ export default function CreateArticlePage() {
                       </label>
                     ))}
                   </div>
-                </Field>
-
-                <Field label="Style" icon={<FileText className="w-4 h-4" />}>
-                  <select
-                    value={style}
-                    onChange={(e) => setStyle(e.target.value)}
-                    className="border rounded-lg p-2 w-full"
-                    disabled={isSubmitting}
-                  >
-                    <option value="1">Style 1</option>
-                    <option value="2">Style 2</option>
-                    <option value="3">Style 3</option>
-                  </select>
                 </Field>
 
                 {/* Text content fields */}
@@ -424,14 +478,21 @@ export default function CreateArticlePage() {
               </div>
 
               <div className="space-y-6">
-                <Field label="Topic" icon={<FileText className="w-4 h-4" />}>
-                  <input
-                    type="text"
+                <Field label="Category" icon={<Bookmark className="w-4 h-4" />}>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
                     className="border rounded-lg p-2 w-full"
-                    value={selectedTopic}
-                    onChange={(e) => setSelectedTopic(e.target.value)}
-                    disabled={isSubmitting}
-                  />
+                    required
+                    disabled={isSubmitting || categories.length === 0}
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option key={category._id} value={category._id}>
+                        {category.Name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
                 <Field label="Language" icon={<Globe className="w-4 h-4" />}>
@@ -442,41 +503,59 @@ export default function CreateArticlePage() {
                     required
                     disabled={isSubmitting}
                   >
-                    <option value="1">Urdu</option>
-                    <option value="2">English</option>
-                    <option value="3">Arabic</option>
+                    <option value="urdu">Urdu</option>
+                    <option value="english">English</option>
+                    <option value="arabic">Arabic</option>
+                    <option value="Hindi">Hindi</option>
                   </select>
                 </Field>
 
                 <Field label="Writer" icon={<Users className="w-4 h-4" />}>
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
+                  <select
                     value={selectedWriter}
                     onChange={(e) => setSelectedWriter(e.target.value)}
-                    required
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field
-                  label="Tags (comma-separated)"
-                  icon={<Hash className="w-4 h-4" />}
-                >
-                  <input
-                    type="text"
                     className="border rounded-lg p-2 w-full"
-                    placeholder="e.g. نعت, حمد, منقبت"
-                    value={selectedTags.join(", ")}
-                    onChange={(e) => setSelectedTags(e.target.value.split(",").map(tag => tag.trim()))}
-                    disabled={isSubmitting}
-                  />
+                    required
+                    disabled={isSubmitting || writers.length === 0}
+                  >
+                    <option value="">Select Writer</option>
+                    {writers.map((writer) => (
+                      <option key={writer._id} value={writer._id}>
+                        {writer.Name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
-                <Field
-                  label="Publication Date"
-                  icon={<CalendarIcon className="w-4 h-4" />}
-                >
+                <Field label="Assign to Groups" icon={<Users className="w-4 h-4" />}>
+                  <select
+                    value={groupId}
+                    onChange={e => setGroupId(e.target.value)}
+                    className="border rounded-lg p-2 w-full"
+                    disabled={isSubmitting || groups.length === 0}
+                  >
+                    <option value="">Select Group</option>
+                    {groups.map(group => (
+                      <option key={group._id} value={group._id}>{group.GroupName}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Assign to Sections" icon={<BookOpen className="w-4 h-4" />}>
+                  <select
+                    value={sectionId}
+                    onChange={e => setSectionId(e.target.value)}
+                    className="border rounded-lg p-2 w-full"
+                    disabled={isSubmitting || sections.length === 0}
+                  >
+                    <option value="">Select Section</option>
+                    {sections.map(section => (
+                      <option key={section._id} value={section._id}>{section.SectionName}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Publication Date" icon={<CalendarIcon className="w-4 h-4" />}>
                   <input
                     type="date"
                     value={publicationDate}
@@ -485,6 +564,33 @@ export default function CreateArticlePage() {
                     required
                     disabled={isSubmitting}
                   />
+                </Field>
+
+                <Field label="Options" icon={<Star className="w-4 h-4" />}>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isFeatured}
+                        onChange={(e) => setIsFeatured(e.target.checked)}
+                        disabled={isSubmitting}
+                      />
+                      <span className="flex items-center gap-1">
+                        <Star className="w-4 h-4" /> Featured
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => setIsSelected(e.target.checked)}
+                        disabled={isSubmitting}
+                      />
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4" /> Selected
+                      </span>
+                    </label>
+                  </div>
                 </Field>
               </div>
             </div>

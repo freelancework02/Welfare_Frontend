@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   CalendarIcon,
@@ -110,16 +110,37 @@ export default function CreateArticlePage() {
   const [writerName, setWriterName] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categoryName, setCategoryName] = useState("");
-  const [thumbnailURL, setThumbnailURL] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [contentUrdu, setContentUrdu] = useState("");
-  const [contentEnglish, setContentEnglish] = useState("");
   const [groupId, setGroupId] = useState("");
   const [groupName, setGroupName] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [sectionName, setSectionName] = useState("");
+  const [topicName, setTopicName] = useState("");
+  const [thumbnailURL, setThumbnailURL] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [contentUrdu, setContentUrdu] = useState("");
+  const [contentEnglish, setContentEnglish] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [writers, setWriters] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [topics, setTopics] = useState([]);
   const fileInputRef = useRef();
+
+  useEffect(() => {
+    // Fetch writers
+    axios.get("https://naatacadmey.onrender.com/api/writers").then(res => setWriters(res.data)).catch(() => setWriters([]));
+    // Fetch categories
+    axios.get("https://naatacadmey.onrender.com/api/categories").then(res => setCategories(res.data)).catch(() => setCategories([]));
+    // Fetch groups
+    axios.get("https://naatacadmey.onrender.com/api/groups").then(res => setGroups(res.data)).catch(() => setGroups([]));
+    // Fetch sections
+    axios.get("https://naatacadmey.onrender.com/api/sections").then(res => setSections(res.data)).catch(() => setSections([]));
+    // Fetch topics
+    axios.get("https://naatacadmey.onrender.com/api/topics").then(res => setTopics(res.data)).catch(() => setTopics([]));
+  }, []);
+
+
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -134,19 +155,19 @@ export default function CreateArticlePage() {
     try {
       setIsSubmitting(true);
       let finalThumbnailURL = null;
-      
+
       // If there's an image to upload
       if (imageFile) {
         const formData = new FormData();
         formData.append('image', imageFile);
-        
+
         try {
           const uploadResponse = await axios.post('https://updated-naatacademy.onrender.com/api/upload', formData, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
           });
-          
+
           finalThumbnailURL = uploadResponse.data.imageUrl;
         } catch (uploadError) {
           console.error('Error uploading image:', uploadError);
@@ -159,19 +180,19 @@ export default function CreateArticlePage() {
           return;
         }
       }
-      
+
       // Validate required fields
-      if (!title || !writerId || !categoryId) {
+      if (!title.trim() || !writerId || !categoryId || !topicName.trim()) {
         Swal.fire({
           icon: "warning",
           title: "Incomplete Fields",
-          text: "Please fill all required fields (Title, Writer ID, and Category ID).",
+          text: "Please fill all required fields (Title, Writer, Category, and Topic).",
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Ensure WriterID and CategoryID are numbers
+      // Ensure WriterID, CategoryID are numbers
       const articleData = {
         Title: title,
         WriterID: parseInt(writerId),
@@ -184,14 +205,15 @@ export default function CreateArticlePage() {
         GroupID: groupId ? parseInt(groupId) : null,
         GroupName: groupName,
         SectionID: sectionId ? parseInt(sectionId) : null,
-        SectionName: sectionName
+        SectionName: sectionName,
+        Topic: topicName
       };
 
       console.log('Sending article data:', articleData);
-      
+
       // Create article
       const response = await axios.post('https://updated-naatacademy.onrender.com/api/articles', articleData);
-      
+
       if (response.data.success) {
         Swal.fire({
           icon: "success",
@@ -199,7 +221,7 @@ export default function CreateArticlePage() {
           text: "Article created successfully!",
           timer: 2000
         });
-        
+
         // Reset form
         setTimeout(() => {
           setTitle("");
@@ -215,6 +237,7 @@ export default function CreateArticlePage() {
           setGroupName("");
           setSectionId("");
           setSectionName("");
+          setTopicName("");
           setIsSubmitting(false);
         }, 2000);
       } else {
@@ -223,11 +246,11 @@ export default function CreateArticlePage() {
     } catch (error) {
       console.error('Error:', error);
       let errorMessage = 'Something went wrong while creating the article.';
-      
+
       if (error.response?.data) {
         console.error('Server error details:', error.response.data);
         errorMessage = error.response.data.message || error.response.data.error || errorMessage;
-        
+
         // Handle specific SQL errors
         if (error.response.data.sqlError) {
           console.error('SQL Error:', error.response.data.sqlError);
@@ -356,112 +379,115 @@ export default function CreateArticlePage() {
               </div>
 
               <div className="space-y-6">
-                <Field 
-                  label="Writer ID" 
+                <Field
+                  label="Writer"
                   icon={<Users className="w-4 h-4" />}
                   required
                 >
-                  <input
-                    type="text"
+                  <select
                     className="border rounded-lg p-2 w-full"
                     value={writerId}
-                    onChange={(e) => setWriterId(e.target.value)}
+                    onChange={e => {
+                      setWriterId(e.target.value);
+                      const selected = writers.find(w => String(w.WriterID) === e.target.value);
+                      setWriterName(selected ? selected.Name : "");
+                    }}
                     required
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select Writer</option>
+                    {writers.map(writer => (
+                      <option key={writer.WriterID} value={writer.WriterID}>
+                        {writer.Name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-
-                <Field 
-                  label="Writer Name" 
-                  icon={<Users className="w-4 h-4" />}
-                >
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={writerName}
-                    onChange={(e) => setWriterName(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field 
-                  label="Category ID" 
+                <Field
+                  label="Category"
                   icon={<Grid className="w-4 h-4" />}
                   required
                 >
-                  <input
-                    type="text"
+                  <select
                     className="border rounded-lg p-2 w-full"
                     value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
+                    onChange={e => {
+                      setCategoryId(e.target.value);
+                      const selected = categories.find(c => String(c.CategoryID) === e.target.value);
+                      setCategoryName(selected ? selected.Name : "");
+                    }}
                     required
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(category => (
+                      <option key={category.CategoryID} value={category.CategoryID}>
+                        {category.Name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-
-                <Field 
-                  label="Category Name" 
-                  icon={<Grid className="w-4 h-4" />}
-                >
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field 
-                  label="Group ID" 
+                <Field
+                  label="Group"
                   icon={<Layers className="w-4 h-4" />}
                 >
-                  <input
-                    type="text"
+                  <select
                     className="border rounded-lg p-2 w-full"
                     value={groupId}
-                    onChange={(e) => setGroupId(e.target.value)}
+                    onChange={e => {
+                      setGroupId(e.target.value);
+                      const selected = groups.find(g => String(g.GroupID) === e.target.value);
+                      setGroupName(selected ? selected.GroupName : "");
+                    }}
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select Group</option>
+                    {groups.map(group => (
+                      <option key={group.GroupID} value={group.GroupID}>
+                        {group.GroupName}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-
-                <Field 
-                  label="Group Name" 
-                  icon={<Layers className="w-4 h-4" />}
-                >
-                  <input
-                    type="text"
-                    className="border rounded-lg p-2 w-full"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    disabled={isSubmitting}
-                  />
-                </Field>
-
-                <Field 
-                  label="Section ID" 
+                <Field
+                  label="Section"
                   icon={<Grid className="w-4 h-4" />}
                 >
-                  <input
-                    type="text"
+                  <select
                     className="border rounded-lg p-2 w-full"
                     value={sectionId}
-                    onChange={(e) => setSectionId(e.target.value)}
+                    onChange={e => {
+                      setSectionId(e.target.value);
+                      const selected = sections.find(s => String(s.SectionID) === e.target.value);
+                      setSectionName(selected ? selected.SectionName : "");
+                    }}
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select Section</option>
+                    {sections.map(section => (
+                      <option key={section.SectionID} value={section.SectionID}>
+                        {section.SectionName}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-
-                <Field 
-                  label="Section Name" 
-                  icon={<Grid className="w-4 h-4" />}
-                >
-                  <input
-                    type="text"
+                <Field label="Topic" icon={<Hash className="w-4 h-4" />} required>
+                  <select
                     className="border rounded-lg p-2 w-full"
-                    value={sectionName}
-                    onChange={(e) => setSectionName(e.target.value)}
+                    value={topicName}
+                    onChange={e => {
+                      setTopicName(e.target.value);
+                    }}
+                    required
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select Topic</option>
+                    {topics.map(topic => (
+                      <option key={topic.TopicID} value={topic.Title}>
+                        {topic.Title}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
             </div>
@@ -469,9 +495,8 @@ export default function CreateArticlePage() {
             <div className="mt-8 flex justify-between">
               <button
                 type="button"
-                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 onClick={() => handleSave(false)}
                 disabled={isSubmitting}
               >
@@ -479,9 +504,8 @@ export default function CreateArticlePage() {
               </button>
               <button
                 type="button"
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 onClick={() => handleSave(true)}
                 disabled={isSubmitting}
               >
@@ -491,6 +515,6 @@ export default function CreateArticlePage() {
           </div>
         </div>
       </div>
-     </Layout>
+    </Layout>
   );
 }
