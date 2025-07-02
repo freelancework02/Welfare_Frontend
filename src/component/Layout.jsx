@@ -7,7 +7,7 @@ import { Menu, X, FileText, BookMarked, PenLine } from 'lucide-react';
 const sidebarLinks = [
   { label: 'Articles', icon: FileText, path: '/' },
   { label: 'View Articles', icon: FileText, path: '/viewarticle' },
-  { label: 'Post Kalam', icon: PenLine, path: '/kalam' },
+  { label: 'Add Kalam', icon: PenLine, path: '/kalam' },
   { label: 'View Kalam', icon: PenLine, path: '/viewkalam' },
   { label: 'Create Topic', icon: BookMarked, path: '/topic' },
   { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
@@ -16,6 +16,8 @@ const sidebarLinks = [
   { label: 'Add Book', icon: BookMarked, path: '/addbook' },
   { label: 'View Book', icon: BookMarked, path: '/viewbook' },
   { label: 'Writers', icon: BookMarked, path: '/writers' },
+  { label: 'Add Section', icon: BookMarked, path: '/section' },
+  { label: 'Add Group', icon: BookMarked, path: '/group' },
 ];
 
 const Layout = ({ children }) => {

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CloudUploadIcon, FileText } from "lucide-react";
 import Layout from "../../../component/Layout";
 import Swal from "sweetalert2";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import Quill from 'quill';
+import axios from "axios";
 
 const Font = Quill.import('formats/font');
 Font.whitelist = [
@@ -64,21 +65,57 @@ const formats = [
 ];
 
 export default function CreateWriterForm() {
-  const [isTeamMember, setIsTeamMember] = useState(false);
+  const [formData, setFormData] = useState({
+    Name: "",
+    LanguageID: "",
+    LanguageName: "",
+    Status: "Active",
+    GroupID: "",
+    GroupName: "",
+    SectionID: "",
+    SectionName: "",
+    Bio: "",
+    ProfileImageURL: ""
+  });
+
   const [profilePic, setProfilePic] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    designation: "",
-    englishDescription: "",
-    urduDescription: ""
-  });
+  const [groups, setGroups] = useState([]);
+  const [groupId, setGroupId] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [sections, setSections] = useState([]);
+  const [sectionId, setSectionId] = useState("");
+  const [sectionName, setSectionName] = useState("");
+  const [languages, setLanguages] = useState([]);
+
+  // Fetch groups, sections, and languages on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [groupsRes, sectionsRes] = await Promise.all([
+          axios.get('https://naatacadmey.onrender.com/api/groups'),
+          axios.get('https://naatacadmey.onrender.com/api/sections')
+        ]);
+        setGroups(groupsRes.data);
+        setSections(sectionsRes.data);
+        // Set default languages
+        setLanguages([
+          { id: 'urdu', name: 'Urdu' },
+          { id: 'english', name: 'English' },
+          { id: 'arabic', name: 'Arabic' }
+        ]);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Swal.fire('Error', 'Failed to fetch required data', 'error');
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate image file type and size (max 5MB)
     if (!file.type.match('image.*')) {
       Swal.fire('Error', 'Please select an image file (JPEG, PNG, etc.)', 'error');
       return;
@@ -97,82 +134,86 @@ export default function CreateWriterForm() {
   };
 
   const handleChange = (e) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [id]: value
-    }));
-  };
-
-  const handleDescriptionChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updatedData = { ...prev, [name]: value };
+      
+      // Update related names when IDs change
+      if (name === 'GroupID') {
+        const selectedGroup = groups.find(g => g.GroupID === value);
+        updatedData.GroupName = selectedGroup ? selectedGroup.GroupName : '';
+      } else if (name === 'SectionID') {
+        const selectedSection = sections.find(s => s.SectionID === value);
+        updatedData.SectionName = selectedSection ? selectedSection.SectionName : '';
+      } else if (name === 'LanguageID') {
+        const selectedLanguage = languages.find(l => l.id === value);
+        updatedData.LanguageName = selectedLanguage ? selectedLanguage.name : '';
+      }
+      
+      return updatedData;
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic validation
-    if (!formData.name.trim()) {
-      Swal.fire('Error', 'Please enter the writer name', 'error');
+    if (!formData.Name || !formData.LanguageID) {
+      Swal.fire('Error', 'Please fill in all required fields', 'error');
       return;
     }
 
-    Swal.fire({
-      title: 'Creating writer...',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
+    const formDataToSend = new FormData();
+    Object.keys(formData).forEach(key => {
+      if (formData[key]) {
+        formDataToSend.append(key, formData[key]);
       }
     });
 
-    const formDataToSend = new FormData();
-    formDataToSend.append("name", formData.name);
-    formDataToSend.append("designation", formData.designation);
-    formDataToSend.append("englishDescription", formData.englishDescription);
-    formDataToSend.append("urduDescription", formData.urduDescription);
-    formDataToSend.append("isTeamMember", isTeamMember);
     if (profilePic) {
       formDataToSend.append("image", profilePic);
     }
 
     try {
-      const response = await fetch("https://newmmdata-backend.onrender.com/api/writers", {
-        method: "POST",
-        body: formDataToSend,
-      });
+      const response = await axios.post(
+        "http://localhost:5000/api/writers",
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create writer");
+      if (response.data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Writer Created Successfully!',
+          text: `Writer ID: ${response.data.writerId}`,
+          timer: 3000,
+          showConfirmButton: false
+        });
+
+        // Reset form
+        setFormData({
+          Name: "",
+          LanguageID: "",
+          LanguageName: "",
+          Status: "Active",
+          GroupID: "",
+          GroupName: "",
+          SectionID: "",
+          SectionName: "",
+          Bio: "",
+          ProfileImageURL: ""
+        });
+        setProfilePic(null);
+        setPreview(null);
       }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Writer Created Successfully!',
-        text: `Created at: ${new Date().toLocaleString()}`,
-        timer: 3000,
-        showConfirmButton: false
-      });
-
-      // Reset form
-      setFormData({
-        name: "",
-        designation: "",
-        englishDescription: "",
-        urduDescription: ""
-      });
-      setIsTeamMember(false);
-      setProfilePic(null);
-      setPreview(null);
-
     } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'Error!',
-        text: error.message || "Something went wrong.",
+        text: error.response?.data?.message || "Failed to create writer",
       });
     }
   };
@@ -182,28 +223,25 @@ export default function CreateWriterForm() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Create Writer</h1>
-          <p className="text-gray-500">Add a new writer to your team</p>
+          <p className="text-gray-500">Add a new writer to your platform</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="bg-white shadow-md rounded-md overflow-hidden">
-            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Profile Image Section */}
               <div className="flex flex-col items-center">
-                <h3 className="text-base font-medium mb-4">Profile Pic</h3>
+                <h3 className="text-base font-medium mb-4">Profile Picture</h3>
                 <label
                   htmlFor="profile-upload"
-                  className="relative border-2 border-dashed border-gray-300 rounded-full w-48 h-48 flex items-center justify-center cursor-pointer overflow-hidden group"
+                  className="relative border-2 border-dashed border-gray-300 rounded-full w-48 h-48 flex items-center justify-center cursor-pointer overflow-hidden"
                 >
                   {preview ? (
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="object-cover w-full h-full rounded-full"
-                    />
+                    <img src={preview} alt="Preview" className="object-cover w-full h-full" />
                   ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-4">
-                      <CloudUploadIcon className="h-10 w-10 text-gray-400 mb-2" />
-                      <p className="text-xs text-gray-500">Click to upload</p>
+                    <div className="text-center">
+                      <CloudUploadIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-1 text-sm text-gray-500">Upload Photo</p>
                     </div>
                   )}
                   <input
@@ -211,96 +249,126 @@ export default function CreateWriterForm() {
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    className="hidden"
                   />
                 </label>
               </div>
 
+              {/* Writer Details Section */}
               <div className="md:col-span-2 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-medium">Team Member</h3>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="isTeamMember"
-                      checked={isTeamMember}
-                      onChange={(e) => setIsTeamMember(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                    />
-                    <label htmlFor="isTeamMember" className="text-sm text-gray-700">
-                      Check if team member
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Name <span className="text-red-500">*</span>
                     </label>
+                    <input
+                      type="text"
+                      name="Name"
+                      value={formData.Name}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Language <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="LanguageID"
+                      value={formData.LanguageID}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Select Language</option>
+                      {languages.map(lang => (
+                        <option key={lang.id} value={lang.id}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Group
+                    </label>
+                    <select
+                      name="GroupID"
+                      value={formData.GroupID}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      <option value="">Select Group</option>
+                      {groups.map(group => (
+                        <option key={group.GroupID} value={group.GroupID}>
+                          {group.GroupName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Section
+                    </label>
+                    <select
+                      name="SectionID"
+                      value={formData.SectionID}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      <option value="">Select Section</option>
+                      {sections.map(section => (
+                        <option key={section.SectionID} value={section.SectionID}>
+                          {section.SectionName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Status
+                    </label>
+                    <select
+                      name="Status"
+                      value={formData.Status}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Name
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    id="name"
-                    placeholder="Enter name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="designation" className="block text-sm font-medium text-gray-700">
-                    Designation
-                  </label>
-                  <input
-                    id="designation"
-                    placeholder="Enter designation"
-                    value={formData.designation}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
+                {/* Bio */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4" />
-                    <label className="text-sm font-medium">English Description</label>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bio
+                  </label>
                   <ReactQuill
                     theme="snow"
-                    value={formData.englishDescription}
-                    onChange={(value) => handleDescriptionChange("englishDescription", value)}
+                    value={formData.Bio}
+                    onChange={(content) => setFormData(prev => ({ ...prev, Bio: content }))}
                     modules={modules}
                     formats={formats}
-                    className="bg-white border rounded-lg min-h-[136px] text-left"
-                    style={{ direction: 'ltr', textAlign: 'left' }}
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4" />
-                    <label className="text-sm font-medium">Urdu Description</label>
-                  </div>
-                  <ReactQuill
-                    theme="snow"
-                    value={formData.urduDescription}
-                    onChange={(value) => handleDescriptionChange("urduDescription", value)}
-                    modules={modules}
-                    formats={formats}
-                    className="bg-white border rounded-lg min-h-[136px] text-right"
-                    style={{ direction: 'rtl', textAlign: 'right' }}
-                    placeholder="Enter Urdu description"
+                    className="bg-white"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          {/* Submit Button */}
+          <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800 transition"
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Create Writer
             </button>

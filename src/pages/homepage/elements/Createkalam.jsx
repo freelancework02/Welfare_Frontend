@@ -13,23 +13,13 @@ import {
   BookOpen,
   Star,
   CheckCircle,
+  Grid,
+  Layers
 } from "lucide-react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
 import Swal from "sweetalert2";
-import { db } from "../../firebase/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  doc,
-  setDoc,
-  serverTimestamp,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-} from "firebase/firestore";
 import axios from "axios";
 
 // Font registration for Quill
@@ -108,16 +98,21 @@ function Field({ label, icon, children }) {
 export default function CreateArticlePage() {
   const [articleTitle, setArticleTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("urdu");
-  const [selectedWriter, setSelectedWriter] = useState("");
   const [publicationDate, setPublicationDate] = useState(getCurrentDate());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [nextDocId, setNextDocId] = useState(0);
-  const [selectedGroups, setSelectedGroups] = useState([]);
-  const [selectedSections, setSelectedSections] = useState([]);
   const [isFeatured, setIsFeatured] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
+
+  // IDs and Names states (similar to CreateBookPage)
+  const [writerId, setWriterId] = useState("");
+  const [writerName, setWriterName] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [sectionName, setSectionName] = useState("");
 
   // Data states
   const [writers, setWriters] = useState([]);
@@ -133,55 +128,36 @@ export default function CreateArticlePage() {
   const [postArabic, setPostArabic] = useState("");
   const [postSharha, setPostSharha] = useState("");
   const [postTranslate, setPostTranslate] = useState("");
-  const [lineSetting, setLineSetting] = useState("2line");
-  const [style, setStyle] = useState("1");
-  const [lineSpacing, setLineSpacing] = useState(2); // Number of lines between spaces
-
-  // New states for single-select dropdowns
-  const [groupId, setGroupId] = useState("");
-  const [sectionId, setSectionId] = useState("");
+  const [lineSpacing, setLineSpacing] = useState(2);
 
   // Fetch data from API
   useEffect(() => {
-    axios.get("https://naatacadmey.onrender.com/api/writers")
-      .then(res => setWriters(res.data))
-      .catch(() => setWriters([]));
-    
-    axios.get("https://naatacadmey.onrender.com/api/categories")
-      .then(res => setCategories(res.data))
-      .catch(() => setCategories([]));
-    
-    axios.get("https://naatacadmey.onrender.com/api/groups")
-      .then(res => setGroups(res.data))
-      .catch(() => setGroups([]));
-    
-    axios.get("https://naatacadmey.onrender.com/api/sections")
-      .then(res => setSections(res.data))
-      .catch(() => setSections([]));
-
-    // Get the next document ID
-    const getNextDocId = async () => {
+    const fetchData = async () => {
       try {
-        const q = query(collection(db, "kalamPosts"), orderBy("book", "desc"), limit(1));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const lastDoc = querySnapshot.docs[0];
-          const lastDocId = parseInt(lastDoc.id);
-          setNextDocId(lastDocId + 1);
-        } else {
-          setNextDocId(684); // Starting ID if collection is empty
-        }
+        const [writersRes, categoriesRes, groupsRes, sectionsRes] = await Promise.all([
+          axios.get("https://naatacadmey.onrender.com/api/writers"),
+          axios.get("https://naatacadmey.onrender.com/api/categories"),
+          axios.get("https://naatacadmey.onrender.com/api/groups"),
+          axios.get("https://naatacadmey.onrender.com/api/sections")
+        ]);
+
+        setWriters(writersRes.data);
+        setCategories(categoriesRes.data);
+        setGroups(groupsRes.data);
+        setSections(sectionsRes.data);
       } catch (error) {
-        console.error("Error getting next document ID:", error);
-        setNextDocId(684); // Fallback starting ID
+        console.error("Error fetching data:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to fetch required data. Please refresh the page.",
+        });
       }
     };
 
-    getNextDocId();
+    fetchData();
   }, []);
 
-  // Format text with line spacing
   const formatTextWithSpacing = (text) => {
     if (!text) return "";
     
@@ -192,28 +168,25 @@ export default function CreateArticlePage() {
     for (let i = 0; i < lines.length; i++) {
       result.push(lines[i]);
       if ((i + 1) % lineSpacing === 0 && i !== lines.length - 1) {
-        result.push(''); // Add empty line for spacing
+        result.push('');
       }
     }
     return result.join('\n');
   };
 
-  // Handle text change with automatic spacing
   const handleTextChange = (setter) => (e) => {
     const text = e.target.value;
     const lines = text.split('\n');
     
-    // If the last line is empty, it means user pressed enter twice
     if (lines[lines.length - 1] === '' && lines[lines.length - 2] === '') {
-      // Remove the extra empty line to prevent double spacing
       setter(lines.slice(0, -1).join('\n'));
     } else {
       setter(text);
     }
   };
 
-  const handleSave = async (isPublish) => {
-    if (!articleTitle || !selectedWriter || !selectedCategory) {
+  const handleSave = async () => {
+    if (!articleTitle.trim() || !writerId || !categoryId) {
       Swal.fire({
         icon: "warning",
         title: "Incomplete Fields",
@@ -225,55 +198,53 @@ export default function CreateArticlePage() {
     setIsSubmitting(true);
   
     try {
-      // Find the selected objects from their IDs
-      const selectedWriterObj = writers.find(w => String(w._id) === String(selectedWriter));
-      const selectedCategoryObj = categories.find(c => String(c._id) === String(selectedCategory));
-      const selectedGroupObj = groups.find(g => String(g._id) === String(groupId));
-      const selectedSectionObj = sections.find(s => String(s._id) === String(sectionId));
-  
-      // Prepare the payload with proper field names matching backend expectations
       const payload = {
-        Title: articleTitle,
-        WriterID: String(selectedWriter), // Ensure string conversion
-        WriterName: selectedWriterObj?.Name || selectedWriterObj?.name || "",
-        CategoryID: String(selectedCategory),
-        CategoryName: selectedCategoryObj?.Name || selectedCategoryObj?.name || "",
-        ContentUrdu: formatTextWithSpacing(postUrdu),
-        ContentRomanUrdu: formatTextWithSpacing(postRoman),
-        ContentArabic: formatTextWithSpacing(postArabic),
-        ContentEnglish: formatTextWithSpacing(postEnglish),
-        ContentHindi: formatTextWithSpacing(postHindi),
-        ContentSharha: formatTextWithSpacing(postSharha),
-        ContentTranslate: formatTextWithSpacing(postTranslate),
-        GroupID: groupId ? String(groupId) : null,
-        GroupName: selectedGroupObj?.GroupName || selectedGroupObj?.name || "",
-        SectionID: sectionId ? String(sectionId) : null,
-        SectionName: selectedSectionObj?.SectionName || selectedSectionObj?.name || "",
+        Title: articleTitle.trim(),
+        Description: description,
+        WriterID: writerId,
+        WriterName: writerName,
+        CategoryID: categoryId,
+        CategoryName: categoryName,
+        ContentUrdu: formatTextWithSpacing(postUrdu) || null,
+        ContentRomanUrdu: formatTextWithSpacing(postRoman) || null,
+        ContentArabic: formatTextWithSpacing(postArabic) || null,
+        ContentEnglish: formatTextWithSpacing(postEnglish) || null,
+        ContentHindi: formatTextWithSpacing(postHindi) || null,
+        ContentSharha: formatTextWithSpacing(postSharha) || null,
+        ContentTranslate: formatTextWithSpacing(postTranslate) || null,
+        GroupID: groupId || null,
+        GroupName: groupName || null,
+        SectionID: sectionId || null,
+        SectionName: sectionName || null,
         IsFeatured: isFeatured ? 1 : 0,
         IsSelected: isSelected ? 1 : 0,
         PublicationDate: publicationDate,
-        Language: selectedLanguage,
-        Status: isPublish ? "published" : "draft"
+        Language: selectedLanguage
       };
   
-      // Debug log to verify payload before sending
-      console.log("Submitting payload:", payload);
+      console.log("Payload being sent:", payload);
   
-      const response = await axios.post("http://localhost:5000/api/kalaam", payload);
+      const response = await axios.post("http://localhost:5000/api/kalaam", payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
   
       if (response.data.success) {
         Swal.fire({
           icon: "success",
-          title: "Kalaam Submitted",
-          text: `Kalaam ${isPublish ? "published" : "saved as draft"} successfully!`,
+          title: "Success",
+          text: "Kalaam created successfully!",
           timer: 2000
         });
   
-        // Reset form after successful submission
+        // Reset form
         setArticleTitle("");
         setDescription("");
-        setSelectedCategory("");
-        setSelectedWriter("");
+        setCategoryId("");
+        setCategoryName("");
+        setWriterId("");
+        setWriterName("");
         setPostUrdu("");
         setPostRoman("");
         setPostEnglish("");
@@ -282,31 +253,31 @@ export default function CreateArticlePage() {
         setPostSharha("");
         setPostTranslate("");
         setGroupId("");
+        setGroupName("");
         setSectionId("");
+        setSectionName("");
         setIsFeatured(false);
         setIsSelected(false);
         setPublicationDate(getCurrentDate());
-        
-        // Get new document ID for next submission
-        const q = query(collection(db, "kalamPosts"), orderBy("book", "desc"), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const lastDoc = querySnapshot.docs[0];
-          setNextDocId(parseInt(lastDoc.id) + 1);
-        }
-      } else {
-        throw new Error(response.data.message || 'Failed to submit kalaam');
       }
     } catch (error) {
       console.error("Submission error:", error);
-      let errorMessage = error.response?.data?.message || 
-                        error.response?.data?.error || 
-                        error.message || 
-                        "Failed to submit kalaam. Please try again.";
+      let errorMessage = "Failed to create kalaam. ";
+      
+      if (error.response) {
+        if (error.response.data) {
+          errorMessage += error.response.data.message || error.response.data.error || 
+                         `Server error (${error.response.status})`;
+        }
+      } else if (error.request) {
+        errorMessage += "No response received from server. Please check your connection.";
+      } else {
+        errorMessage += error.message;
+      }
   
       Swal.fire({
         icon: "error",
-        title: "Submission Failed",
+        title: "Error",
         text: errorMessage,
       });
     } finally {
@@ -327,7 +298,7 @@ export default function CreateArticlePage() {
               Kalam
             </Link>
             <span>&gt;</span>
-            <span className="text-foreground">Create Kalam (ID: {nextDocId})</span>
+            <span className="text-foreground">Create Kalam</span>
           </nav>
 
           <h1 className="text-2xl font-bold mb-8">Create Kalam</h1>
@@ -478,17 +449,21 @@ export default function CreateArticlePage() {
               </div>
 
               <div className="space-y-6">
-                <Field label="Category" icon={<Bookmark className="w-4 h-4" />}>
+              <Field label="Category" icon={<Grid className="w-4 h-4" />} required>
                   <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
                     className="border rounded-lg p-2 w-full"
+                    value={categoryId}
+                    onChange={e => {
+                      setCategoryId(e.target.value);
+                      const selected = categories.find(c => String(c.CategoryID) === e.target.value);
+                      setCategoryName(selected ? selected.Name : "");
+                    }}
                     required
-                    disabled={isSubmitting || categories.length === 0}
+                    disabled={isSubmitting}
                   >
                     <option value="">Select Category</option>
-                    {categories.map((category) => (
-                      <option key={category._id} value={category._id}>
+                    {categories.map(category => (
+                      <option key={category.CategoryID} value={category.CategoryID}>
                         {category.Name}
                       </option>
                     ))}
@@ -510,47 +485,63 @@ export default function CreateArticlePage() {
                   </select>
                 </Field>
 
-                <Field label="Writer" icon={<Users className="w-4 h-4" />}>
+                <Field label="Writer" icon={<Users className="w-4 h-4" />} required>
                   <select
-                    value={selectedWriter}
-                    onChange={(e) => setSelectedWriter(e.target.value)}
                     className="border rounded-lg p-2 w-full"
+                    value={writerId}
+                    onChange={e => {
+                      setWriterId(e.target.value);
+                      const selected = writers.find(w => String(w.WriterID) === e.target.value);
+                      setWriterName(selected ? selected.Name : "");
+                    }}
                     required
-                    disabled={isSubmitting || writers.length === 0}
+                    disabled={isSubmitting}
                   >
                     <option value="">Select Writer</option>
-                    {writers.map((writer) => (
-                      <option key={writer._id} value={writer._id}>
+                    {writers.map(writer => (
+                      <option key={writer.WriterID} value={writer.WriterID}>
                         {writer.Name}
                       </option>
                     ))}
                   </select>
                 </Field>
 
-                <Field label="Assign to Groups" icon={<Users className="w-4 h-4" />}>
+                <Field label="Group" icon={<Layers className="w-4 h-4" />}>
                   <select
-                    value={groupId}
-                    onChange={e => setGroupId(e.target.value)}
                     className="border rounded-lg p-2 w-full"
-                    disabled={isSubmitting || groups.length === 0}
+                    value={groupId}
+                    onChange={e => {
+                      setGroupId(e.target.value);
+                      const selected = groups.find(g => String(g.GroupID) === e.target.value);
+                      setGroupName(selected ? selected.GroupName : "");
+                    }}
+                    disabled={isSubmitting}
                   >
                     <option value="">Select Group</option>
                     {groups.map(group => (
-                      <option key={group._id} value={group._id}>{group.GroupName}</option>
+                      <option key={group.GroupID} value={group.GroupID}>
+                        {group.GroupName}
+                      </option>
                     ))}
                   </select>
                 </Field>
 
-                <Field label="Assign to Sections" icon={<BookOpen className="w-4 h-4" />}>
+                <Field label="Section" icon={<Grid className="w-4 h-4" />}>
                   <select
-                    value={sectionId}
-                    onChange={e => setSectionId(e.target.value)}
                     className="border rounded-lg p-2 w-full"
-                    disabled={isSubmitting || sections.length === 0}
+                    value={sectionId}
+                    onChange={e => {
+                      setSectionId(e.target.value);
+                      const selected = sections.find(s => String(s.SectionID) === e.target.value);
+                      setSectionName(selected ? selected.SectionName : "");
+                    }}
+                    disabled={isSubmitting}
                   >
                     <option value="">Select Section</option>
                     {sections.map(section => (
-                      <option key={section._id} value={section._id}>{section.SectionName}</option>
+                      <option key={section.SectionID} value={section.SectionID}>
+                        {section.SectionName}
+                      </option>
                     ))}
                   </select>
                 </Field>
@@ -595,24 +586,16 @@ export default function CreateArticlePage() {
               </div>
             </div>
 
-            <div className="mt-8 flex justify-between">
+            <div className="mt-8 flex justify-end">
               <button
                 type="button"
-                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                onClick={() => handleSave(false)}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${
+                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                onClick={handleSave}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Submitting..." : "Save as Draft"}
-              </button>
-              <button
-                type="button"
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                onClick={() => handleSave(true)}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting..." : "Publish"}
+                {isSubmitting ? "Submitting..." : "Create Kalaam"}
               </button>
             </div>
           </div>

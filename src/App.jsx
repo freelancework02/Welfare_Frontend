@@ -52,6 +52,9 @@ import KalamDetail from "./pages/homepage/elements/KalamDetail";
 import ViewWriter from "./pages/homepage/elements/ViewWriter";
 import EditTopic from './pages/homepage/elements/EditTopic';
 import EditBook from './pages/homepage/elements/EditBook';
+import CreateSection from './pages/homepage/elements/CreateSection'
+import CreateGroup from './pages/homepage/elements/CreateGroup'
+
 
 const App = () => {
   return (
@@ -60,6 +63,8 @@ const App = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<CreateArticlePage />} />
+        <Route path="/section" element={<CreateSection />} />
+        <Route path="/group" element={<CreateGroup />} />
         <Route path="/kalam" element={<Createkalam />} />
         <Route path="/viewtopics" element={<ViewTopics />} />
         <Route path="/viewtopics/edit/:id" element={<EditTopic />} />
