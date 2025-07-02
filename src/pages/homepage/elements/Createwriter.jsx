@@ -81,11 +81,7 @@ export default function CreateWriterForm() {
   const [profilePic, setProfilePic] = useState(null);
   const [preview, setPreview] = useState(null);
   const [groups, setGroups] = useState([]);
-  const [groupId, setGroupId] = useState("");
-  const [groupName, setGroupName] = useState("");
   const [sections, setSections] = useState([]);
-  const [sectionId, setSectionId] = useState("");
-  const [sectionName, setSectionName] = useState("");
   const [languages, setLanguages] = useState([]);
 
   // Fetch groups, sections, and languages on component mount
@@ -137,19 +133,18 @@ export default function CreateWriterForm() {
     const { name, value } = e.target;
     setFormData(prev => {
       const updatedData = { ...prev, [name]: value };
-      
-      // Update related names when IDs change
       if (name === 'GroupID') {
-        const selectedGroup = groups.find(g => g.GroupID === value);
-        updatedData.GroupName = selectedGroup ? selectedGroup.GroupName : '';
-      } else if (name === 'SectionID') {
-        const selectedSection = sections.find(s => s.SectionID === value);
-        updatedData.SectionName = selectedSection ? selectedSection.SectionName : '';
-      } else if (name === 'LanguageID') {
-        const selectedLanguage = languages.find(l => l.id === value);
-        updatedData.LanguageName = selectedLanguage ? selectedLanguage.name : '';
+        const selected = groups.find(g => String(g.GroupID) === value);
+        updatedData.GroupName = selected ? selected.GroupName : "";
       }
-      
+      if (name === 'SectionID') {
+        const selected = sections.find(s => String(s.SectionID) === value);
+        updatedData.SectionName = selected ? selected.SectionName : "";
+      }
+      if (name === 'LanguageID') {
+        const selected = languages.find(l => l.id === value);
+        updatedData.LanguageName = selected ? selected.name : "";
+      }
       return updatedData;
     });
   };
@@ -164,9 +159,7 @@ export default function CreateWriterForm() {
 
     const formDataToSend = new FormData();
     Object.keys(formData).forEach(key => {
-      if (formData[key]) {
-        formDataToSend.append(key, formData[key]);
-      }
+      formDataToSend.append(key, formData[key] || "");
     });
 
     if (profilePic) {

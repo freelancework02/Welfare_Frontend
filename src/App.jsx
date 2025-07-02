@@ -54,6 +54,7 @@ import EditTopic from './pages/homepage/elements/EditTopic';
 import EditBook from './pages/homepage/elements/EditBook';
 import CreateSection from './pages/homepage/elements/CreateSection'
 import CreateGroup from './pages/homepage/elements/CreateGroup'
+import AddTopic from './pages/homepage/elements/AddTopic'
 
 
 const App = () => {
@@ -63,6 +64,7 @@ const App = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<CreateArticlePage />} />
+        <Route path="topic" element={<AddTopic />} />
         <Route path="/section" element={<CreateSection />} />
         <Route path="/group" element={<CreateGroup />} />
         <Route path="/kalam" element={<Createkalam />} />
@@ -115,7 +117,7 @@ const App = () => {
         <Route path="/translator" element={<TranslatorList />} />
         <Route path="/languages" element={<LanguagesGrid />} />
         <Route path="/home_book_slider" element={<HomeBookSlider />} />
-        <Route path="/topic" element={<TopicList />} />
+        <Route path="/category" element={<TopicList />} />
         <Route path="/topic-update/:id" element={<TopicUpdateForm />} />
         <Route path="/create-topic" element={<CreateTopic />} />
 

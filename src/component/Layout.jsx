@@ -9,15 +9,14 @@ const sidebarLinks = [
   { label: 'View Articles', icon: FileText, path: '/viewarticle' },
   { label: 'Add Kalam', icon: PenLine, path: '/kalam' },
   { label: 'View Kalam', icon: PenLine, path: '/viewkalam' },
-  { label: 'Create Topic', icon: BookMarked, path: '/topic' },
+  { label: 'Create Category', icon: BookMarked, path: '/category' },
   { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
-  { label: 'Add Language', icon: BookMarked, path: '/addlang' },
-  { label: 'View Language', icon: BookMarked, path: '/viewlang' },
   { label: 'Add Book', icon: BookMarked, path: '/addbook' },
   { label: 'View Book', icon: BookMarked, path: '/viewbook' },
   { label: 'Writers', icon: BookMarked, path: '/writers' },
   { label: 'Add Section', icon: BookMarked, path: '/section' },
   { label: 'Add Group', icon: BookMarked, path: '/group' },
+  { label: 'Add Topic', icon: BookMarked, path: '/topic' },
 ];
 
 const Layout = ({ children }) => {

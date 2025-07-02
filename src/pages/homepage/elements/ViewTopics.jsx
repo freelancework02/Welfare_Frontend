@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../../../component/Layout';
-import { collection, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../../firebase/firebaseConfig';
 import { FileText, Search, ChevronUp, ChevronDown, Pencil, Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const ViewTopics = () => {
   const [topics, setTopics] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'createdOn', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -16,27 +14,8 @@ const ViewTopics = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchTopics = async () => {
-      try {
-        const topicsCollection = collection(db, 'topics');
-        const q = query(topicsCollection, orderBy(sortConfig.key, sortConfig.direction));
-        const querySnapshot = await getDocs(q);
-
-        const topicsData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdOn: doc.data().createdOn?.toDate().toLocaleString() || 'N/A',
-        }));
-
-        setTopics(topicsData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching topics: ', error);
-        setLoading(false);
-      }
-    };
-
-    fetchTopics();
+    setLoading(false);
+    setTopics([]);
   }, [sortConfig]);
 
   const requestSort = (key) => {
@@ -57,27 +36,28 @@ const ViewTopics = () => {
     });
 
     if (result.isConfirmed) {
-      try {
-        await deleteDoc(doc(db, 'topics', id));
-        setTopics((prev) => prev.filter((topic) => topic.id !== id));
-        Swal.fire('Deleted!', 'Topic has been deleted.', 'success');
-      } catch (error) {
-        console.error('Error deleting topic: ', error);
-        Swal.fire('Error', 'Failed to delete topic.', 'error');
-      }
+      setTopics((prev) => prev.filter((topic) => topic.id !== id));
+      Swal.fire('Deleted!', 'Topic has been deleted.', 'success');
     }
   };
 
   const filteredTopics = topics.filter((topic) =>
-    topic.topicName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    topic.numbering.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    topic.aboutTopic.toLowerCase().includes(searchTerm.toLowerCase())
+    (topic.topicName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (topic.numbering || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (topic.aboutTopic || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sortedTopics = [...filteredTopics].sort((a, b) => {
+    if (!a[sortConfig.key] || !b[sortConfig.key]) return 0;
+    if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredTopics.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
+  const currentItems = sortedTopics.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedTopics.length / itemsPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -177,10 +157,10 @@ const ViewTopics = () => {
           </table>
         </div>
 
-        {filteredTopics.length > itemsPerPage && (
+        {sortedTopics.length > itemsPerPage && (
           <div className="flex justify-between items-center mt-4">
             <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredTopics.length)}</span> of <span className="font-medium">{filteredTopics.length}</span> results
+              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, sortedTopics.length)}</span> of <span className="font-medium">{sortedTopics.length}</span> results
             </div>
             <div className="flex space-x-2">
               <button

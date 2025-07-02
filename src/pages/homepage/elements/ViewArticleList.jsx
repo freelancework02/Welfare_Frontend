@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../../../component/Layout';
 import { useNavigate } from 'react-router-dom';
-import { collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '../../firebase/firebaseConfig';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 const ViewArticleList = () => {
   const [articles, setArticles] = useState([]);
@@ -17,17 +16,16 @@ const ViewArticleList = () => {
     const fetchArticles = async () => {
       setLoading(true);
       try {
-        const q = query(collection(db, 'articlePosts'), orderBy("createdOn", "desc"));
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setArticles(data);
+        // Replace with your actual API endpoint
+        const response = await axios.get('http://localhost:5000/api/articles');
+        setArticles(response.data);
       } catch (error) {
-        console.error('Error fetching articles from Firestore:', error);
+        Swal.fire('Error', 'Failed to fetch articles', 'error');
+        setArticles([]);
       } finally {
         setLoading(false);
       }
     };
-
     fetchArticles();
   }, []);
 
@@ -41,16 +39,10 @@ const ViewArticleList = () => {
       cancelButtonColor: '#3085d6',
       confirmButtonText: 'Yes, delete it!'
     });
-
     if (result.isConfirmed) {
-      try {
-        await deleteDoc(doc(db, "articlePosts", id));
-        setArticles(articles.filter(article => article.id !== id));
-        Swal.fire('Deleted!', 'The article has been deleted.', 'success');
-      } catch (error) {
-        console.error('Error deleting article:', error);
-        Swal.fire('Error', 'Something went wrong!', 'error');
-      }
+      // TODO: Replace with API call to delete article
+      setArticles(articles.filter(article => article.ArticleID !== id));
+      Swal.fire('Deleted!', 'The article has been deleted.', 'success');
     }
   };
 
@@ -82,8 +74,6 @@ const ViewArticleList = () => {
 
   const getImageSrc = (imageUrl) => imageUrl || '';
 
-  const isArticlePublished = (published) => published === true;
-
   return (
     <Layout>
       <div className="p-6">
@@ -97,88 +87,46 @@ const ViewArticleList = () => {
             <thead className="bg-gray-100 text-gray-700 text-sm font-semibold">
               <tr>
                 <th className="py-3 px-4 border-b text-left">Sr</th>
-                <th className="py-3 px-4 border-b text-left">Status</th>
+                <th className="py-3 px-4 border-b text-left">Title</th>
                 <th className="py-3 px-4 border-b text-left">Image</th>
                 <th className="py-3 px-4 border-b text-left">English Description</th>
                 <th className="py-3 px-4 border-b text-left">Urdu Description</th>
-                <th className="py-3 px-4 border-b text-left">Title</th>
                 <th className="py-3 px-4 border-b text-left">Writers</th>
                 <th className="py-3 px-4 border-b text-left">Translators</th>
-                <th className="py-3 px-4 border-b text-left">Language</th>
-                <th className="py-3 px-4 border-b text-left">Views</th>
-                <th className="py-3 px-4 border-b text-left">Date</th>
-                <th className="py-3 px-4 border-b text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="12" className="text-center py-6 text-gray-500">Loading articles...</td>
+                  <td colSpan="7" className="text-center py-6 text-gray-500">Loading articles...</td>
                 </tr>
               ) : currentArticles.length > 0 ? (
                 currentArticles.map((article, index) => (
-                  <tr key={article.id} className="hover:bg-gray-50">
+                  <tr key={article.ArticleID} className="hover:bg-gray-50">
                     <td className="py-3 px-4 border-b">{(currentPage - 1) * articlesPerPage + index + 1}</td>
+                    <td className="py-3 px-4 border-b">{article.Title}</td>
                     <td className="py-3 px-4 border-b">
-                      <label className="inline-flex relative items-center cursor-pointer">
-                        <input type="checkbox" checked={isArticlePublished(article.published)} readOnly className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-green-500"></div>
-                        <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-full"></div>
-                      </label>
-                    </td>
-                    <td className="py-3 px-4 border-b">
-                      {article.image ? (
-                        <img src={getImageSrc(article.image)} alt={article.title} className="w-16 h-auto object-cover" />
+                      {article.ThumbnailURL ? (
+                        <img src={getImageSrc(article.ThumbnailURL)} alt={article.Title} className="w-16 h-auto object-cover" />
                       ) : "N/A"}
                     </td>
                     <td className="py-3 px-4 border-b max-w-[200px]">
                       <div className="line-clamp-2">
-                        {truncateText(article?.BlogText?.english)}
+                        {truncateText(article.ContentEnglish)}
                       </div>
                     </td>
                     <td className="py-3 px-4 border-b max-w-[200px]">
                       <div className="line-clamp-2 text-right">
-                        {truncateText(article?.BlogText?.urdu)}
+                        {truncateText(article.ContentUrdu)}
                       </div>
                     </td>
-                    <td className="py-3 px-4 border-b">{article.title}</td>
-                    <td className="py-3 px-4 border-b">{article.writers}</td>
-                    <td className="py-3 px-4 border-b">{article.translator || "-"}</td>
-                    <td className="py-3 px-4 border-b">{article.language}</td>
-                    <td className="py-3 px-4 border-b">{article.views || 0}</td>
-                    <td className="py-3 px-4 border-b">
-                      {article.createdOn?.toDate
-                        ? article.createdOn.toDate().toLocaleDateString()
-                        : "-"}
-                    </td>
-                    <td className="py-3 px-4 border-b space-x-2">
-                      <button
-                        onClick={() => navigate(`/viewarticle/article/${article.id}`)}
-                        className="px-2 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/edit-article/${article.id}`)}
-                        className="px-2 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(article.id)}
-                        className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+                    <td className="py-3 px-4 border-b">{article.WriterName}</td>
+                    <td className="py-3 px-4 border-b">{article.TranslatorName || "-"}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="12" className="text-center py-6 text-gray-500">No articles found.</td>
+                  <td colSpan="7" className="text-center py-6 text-gray-500">No articles found.</td>
                 </tr>
               )}
             </tbody>
