@@ -16,7 +16,7 @@ export default function TopicDetail() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/topics/${id}`);
+        const response = await axios.get(`https://updated-naatacademy.onrender.com/api/topics/${id}`);
         setTopic(response.data);
       } catch (err) {
         setError("Failed to fetch topic");

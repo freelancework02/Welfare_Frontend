@@ -16,7 +16,7 @@ export default function ViewArticleDetail() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/articles/${id}`);
+        const response = await axios.get(`https://updated-naatacademy.onrender.com/api/articles/${id}`);
         setArticle(response.data);
       } catch (err) {
         setError("Failed to fetch article");

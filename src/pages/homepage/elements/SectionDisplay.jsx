@@ -15,7 +15,7 @@ export default function SectionDisplay() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://localhost:5000/api/sections");
+        const response = await axios.get("https://updated-naatacademy.onrender.com/api/sections");
         setSections(response.data);
       } catch (err) {
         setError("Failed to fetch sections");

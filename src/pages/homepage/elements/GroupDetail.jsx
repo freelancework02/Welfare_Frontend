@@ -16,7 +16,7 @@ export default function GroupDetail() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/groups/${id}`);
+        const response = await axios.get(`https://updated-naatacademy.onrender.com/api/groups/${id}`);
         setGroup(response.data);
       } catch (err) {
         setError("Failed to fetch group");

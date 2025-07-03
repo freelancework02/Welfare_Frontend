@@ -20,7 +20,7 @@ export default function ViewWriter() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/writers/${id}`);
+        const response = await axios.get(`https://updated-naatacademy.onrender.com/api/writers/${id}`);
         setWriter(response.data);
       } catch (err) {
         setError("Failed to fetch writer");
