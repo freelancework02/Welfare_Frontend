@@ -4,6 +4,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { useNavigate } from "react-router-dom";
 
 export default function CreateTopic() {
   const [form, setForm] = useState({
@@ -19,6 +20,7 @@ export default function CreateTopic() {
   const [categories, setCategories] = useState([]);
   const [groups, setGroups] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get("https://naatacadmey.onrender.com/api/categories")
@@ -90,6 +92,14 @@ export default function CreateTopic() {
     <Layout>
       <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-8">
+          {/* Back Button */}
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
+          >
+            ← Back
+          </button>
           <h1 className="text-2xl font-bold mb-8">Create Topic</h1>
           <form onSubmit={handleSubmit} className="bg-slate-50 rounded-lg p-8 max-w-2xl mx-auto space-y-6 shadow">
             <div>

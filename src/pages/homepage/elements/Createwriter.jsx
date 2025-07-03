@@ -6,6 +6,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import Quill from 'quill';
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Font = Quill.import('formats/font');
 Font.whitelist = [
@@ -83,6 +84,8 @@ export default function CreateWriterForm() {
   const [groups, setGroups] = useState([]);
   const [sections, setSections] = useState([]);
   const [languages, setLanguages] = useState([]);
+
+  const navigate = useNavigate();
 
   // Fetch groups, sections, and languages on component mount
   useEffect(() => {
@@ -214,6 +217,14 @@ export default function CreateWriterForm() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Back Button */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
+        >
+          ← Back
+        </button>
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Create Writer</h1>
           <p className="text-gray-500">Add a new writer to your platform</p>

@@ -3,20 +3,33 @@ import Layout from '../../../component/Layout';
 import { FileText, Search, ChevronUp, ChevronDown, Pencil, Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 const ViewTopics = () => {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'createdOn', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'Title', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLoading(false);
-    setTopics([]);
-  }, [sortConfig]);
+    const fetchTopics = async () => {
+      setLoading(true);
+      try {
+        // Replace with your actual API endpoint
+        const response = await axios.get('http://localhost:5000/api/topics');
+        setTopics(response.data);
+      } catch (error) {
+        Swal.fire('Error', 'Failed to fetch topics', 'error');
+        setTopics([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTopics();
+  }, []);
 
   const requestSort = (key) => {
     let direction = 'asc';
@@ -34,19 +47,21 @@ const ViewTopics = () => {
       showCancelButton: true,
       confirmButtonText: 'Yes, delete it!',
     });
-
     if (result.isConfirmed) {
+      // TODO: Replace with API call to delete topic
       setTopics((prev) => prev.filter((topic) => topic.id !== id));
       Swal.fire('Deleted!', 'Topic has been deleted.', 'success');
     }
   };
 
   const filteredTopics = topics.filter((topic) =>
-    (topic.topicName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (topic.numbering || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (topic.aboutTopic || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (topic.Title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (topic.CategoryName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (topic.GroupName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (topic.Slug || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Client-side sorting
   const sortedTopics = [...filteredTopics].sort((a, b) => {
     if (!a[sortConfig.key] || !b[sortConfig.key]) return 0;
     if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -76,6 +91,12 @@ const ViewTopics = () => {
       <div className="max-w-6xl mx-auto bg-white p-6 rounded shadow mt-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">All Topics</h2>
+          <button
+            onClick={() => navigate('/topic')}
+            className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base"
+          >
+            Add Topic
+          </button>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
@@ -97,49 +118,50 @@ const ViewTopics = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th onClick={() => requestSort('numbering')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
-                  <div className="flex items-center">Number {sortConfig.key === 'numbering' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
+                <th onClick={() => requestSort('Title')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Title {sortConfig.key === 'Title' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
                 </th>
-                <th onClick={() => requestSort('topicName')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
-                  <div className="flex items-center">Topic Name {sortConfig.key === 'topicName' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
+                <th onClick={() => requestSort('CategoryName')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Category {sortConfig.key === 'CategoryName' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                <th onClick={() => requestSort('createdOn')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
-                  <div className="flex items-center">Created On {sortConfig.key === 'createdOn' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
+                <th onClick={() => requestSort('GroupName')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Group {sortConfig.key === 'GroupName' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th onClick={() => requestSort('Slug')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Slug {sortConfig.key === 'Slug' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
+                </th>
+                <th onClick={() => requestSort('CreatedOn')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">
+                  <div className="flex items-center">Created On {sortConfig.key === 'CreatedOn' && (sortConfig.direction === 'asc' ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />)}</div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentItems.length > 0 ? (
                 currentItems.map((topic) => (
-                  <tr key={topic.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{topic.numbering}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{topic.topicName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div
-                        className="h-6 w-6 rounded-full border border-gray-300"
-                        style={{ backgroundColor: topic.color }}
-                        title={topic.color}
-                      ></div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{topic.createdOn}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${topic.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {topic.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
+                  <tr key={topic.id || topic.TopicID} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{topic.Title}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{topic.CategoryName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{topic.GroupName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{topic.Slug}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{topic.CreatedOn || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                       <button
-                        onClick={() => navigate(`/viewtopics/edit/${topic.id}`)}
+                        onClick={() => navigate(`/topics/${topic.id || topic.TopicID}`)}
+                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                        title="View Topic"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => navigate(`/viewtopics/edit/${topic.id || topic.TopicID}`)}
                         className="text-blue-600 hover:text-blue-900"
                         title="Edit"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(topic.id)}
+                        onClick={() => handleDelete(topic.id || topic.TopicID)}
                         className="text-red-600 hover:text-red-900"
                         title="Delete"
                       >
@@ -150,7 +172,7 @@ const ViewTopics = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">No topics found</td>
+                  <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">No topics found</td>
                 </tr>
               )}
             </tbody>

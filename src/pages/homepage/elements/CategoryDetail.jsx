@@ -4,28 +4,28 @@ import Layout from "../../../component/Layout";
 import Swal from "sweetalert2";
 import axios from "axios";
 
-export default function ViewBookDetail() {
+export default function CategoryDetail() {
   const { id } = useParams();
-  const [book, setBook] = useState(null);
+  const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchBook = async () => {
+    const fetchCategory = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:5000/api/books/${id}`);
-        setBook(response.data);
+        const response = await axios.get(`http://localhost:5000/api/categories/${id}`);
+        setCategory(response.data);
       } catch (err) {
-        setError("Failed to fetch book");
-        Swal.fire("Error", "Failed to fetch book", "error");
+        setError("Failed to fetch category");
+        Swal.fire("Error", "Failed to fetch category", "error");
       } finally {
         setLoading(false);
       }
     };
-    fetchBook();
+    fetchCategory();
   }, [id]);
 
   if (loading) {
@@ -48,7 +48,7 @@ export default function ViewBookDetail() {
     );
   }
 
-  if (!book) return null;
+  if (!category) return null;
 
   return (
     <Layout>
@@ -60,30 +60,17 @@ export default function ViewBookDetail() {
         >
           ← Back
         </button>
-        <h1 className="text-3xl font-bold mb-2 text-center">{book.Title}</h1>
+        <h1 className="text-3xl font-bold mb-2 text-center">{category.Name}</h1>
         <div className="flex flex-wrap justify-center gap-4 mb-4 text-gray-600 text-sm">
-          <span>Author: <span className="font-semibold">{book.AuthorName || '-'}</span></span>
-          <span>Language: <span className="font-semibold">{book.LanguageName || '-'}</span></span>
-          {book.GroupName && <span>Group: <span className="font-semibold">{book.GroupName}</span></span>}
-          {book.SectionName && <span>Section: <span className="font-semibold">{book.SectionName}</span></span>}
+          <span>Slug: <span className="font-semibold">{category.Slug || '-'}</span></span>
+          {category.GroupName && <span>Group: <span className="font-semibold">{category.GroupName}</span></span>}
+          {category.Color && <span>Color: <span className="inline-block w-6 h-6 rounded-full border align-middle" style={{ backgroundColor: category.Color }} title={category.Color}></span></span>}
         </div>
-        {book.CoverImageURL && (
-          <div className="flex justify-center mb-6">
-            <img
-              src={book.CoverImageURL}
-              alt={book.Title}
-              className="rounded shadow max-h-72 object-contain"
-            />
-          </div>
-        )}
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Description</h2>
-          <div className="prose max-w-none border rounded p-4 bg-gray-50" dangerouslySetInnerHTML={{ __html: book.Description || '<em>No description</em>' }} />
-        </div>
-        <div className="text-right text-gray-500 text-xs mt-8">
-          Created On: {book.CreatedOn ? new Date(book.CreatedOn).toLocaleString() : '-'}
+          <div className="prose max-w-none border rounded p-4 bg-gray-50" dangerouslySetInnerHTML={{ __html: category.Description || '<em>No description</em>' }} />
         </div>
       </div>
     </Layout>
   );
-}
+} 

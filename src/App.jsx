@@ -14,9 +14,9 @@ import CreateBookPage from "./pages/homepage/elements/CreateBookPage";
 import CreateArticlePage from "./pages/homepage/elements/CreateArticlePage";
 import ContactList from "./pages/ContactList";
 import BookList from "./pages/homepage/elements/BookList";
-import ViewBookDetail from "./pages/homepage/elements/ViewBookDetail";
+// import ViewBookDetail from "./pages/homepage/elements/ViewBookDetail";
 import WriterManagement from "./pages/homepage/elements/WriterManagement";
-import WriterDetail from "./pages/homepage/elements/WriterDetail";
+import WriterDetail from "./pages/homepage/elements/Addwriter";
 import CreateWriterForm from "./pages/homepage/elements/Createwriter";
 import ViewArticleList from "./pages/homepage/elements/ViewArticleList";
 import ViewArticleDetail from "./pages/homepage/elements/ViewArticleDetail";
@@ -48,14 +48,23 @@ import AddBook from "./pages/homepage/elements/CreateBookPage";
 import ViewBooks from '../src/pages/homepage/elements/ViewBook';
 import Editkalam from '../src/pages/homepage/elements/Editkalam'
 import EditArticle from '../src/pages/homepage/elements/EditArticle'
-import KalamDetail from "./pages/homepage/elements/KalamDetail";
-import ViewWriter from "./pages/homepage/elements/ViewWriter";
+// import KalamDetail from "./pages/homepage/elements/KalamDetail";
+// import ViewWriter from "./pages/homepage/elements/ViewWriter";
 import EditTopic from './pages/homepage/elements/EditTopic';
 import EditBook from './pages/homepage/elements/EditBook';
 import CreateSection from './pages/homepage/elements/CreateSection'
 import CreateGroup from './pages/homepage/elements/CreateGroup'
 import AddTopic from './pages/homepage/elements/AddTopic'
-
+import CategoryDisplay from './pages/homepage/elements/CategoryDisplay';
+import SectionDisplay from './pages/homepage/elements/SectionDisplay';
+import DisplayGroup from './pages/homepage/elements/DisplayGroup';
+import CategoryDetail from './pages/homepage/elements/CategoryDetail';
+import KalamDetail from "./pages/homepage/elements/KalamDetail";
+import ViewWriter from "./pages/homepage/elements/ViewWriter";
+import ViewBookDetail from "./pages/homepage/elements/ViewBookDetail";
+import SectionDetail from "./pages/homepage/elements/SectionDetail";
+import GroupDetail from "./pages/homepage/elements/GroupDetail";
+import TopicDetail from "./pages/homepage/elements/TopicDetail";
 
 const App = () => {
   return (
@@ -69,14 +78,21 @@ const App = () => {
         <Route path="/group" element={<CreateGroup />} />
         <Route path="/kalam" element={<Createkalam />} />
         <Route path="/viewtopics" element={<ViewTopics />} />
+        <Route path="/viewcategory" element={<CategoryDisplay />} />
+        <Route path="/categories/:id" element={<CategoryDetail />} />
+        <Route path="/sections/:id" element={<SectionDetail />} />
+        <Route path="/groups/:id" element={<GroupDetail />} />
+        <Route path="/topics/:id" element={<TopicDetail />} />
         <Route path="/viewtopics/edit/:id" element={<EditTopic />} />
-
+        <Route path="/viewsection" element={<SectionDisplay />} />
+        <Route path="/viewgroup" element={<DisplayGroup />} />
         <Route path="/viewkalam" element={<Viewkalam />} />
+        <Route path="/kalaam/:id" element={<KalamDetail />} />
         <Route path="/viewlang" element={<ViewLanguages />} />
         <Route path="/addlang" element={<AddLanguage />} />
         <Route path="/edit-kalam/:id" element={<Editkalam />} />
         <Route path="/edit-article/:id" element={<EditArticle />} />
-        <Route path="/viewkalam/:id" element={<KalamDetail />} />
+        {/* <Route path="/viewkalam/:id" element={<KalamDetail />} /> */}
         <Route path="/addbook" element={<AddBook />} />
         <Route path="/viewbook" element={<ViewBooks />} />
         <Route path="/edit-book/:id" element={<EditBook />} />
@@ -86,7 +102,7 @@ const App = () => {
         <Route path="/article" element={<CreateArticlePage />} />
         <Route path="/viewarticle" element={<ViewArticleList />} />
         <Route
-          path="/viewarticle/article/:id"
+          path="/articles/:id"
           element={<ViewArticleDetail />}
         />
         <Route
@@ -98,12 +114,12 @@ const App = () => {
 
         <Route path="/contact" element={<ContactList />} />
         <Route path="/writers" element={<WriterManagement />} />
-        <Route path="/viewwriters/:id" element={<ViewWriter />} />
+        <Route path="/writers/:id" element={<ViewWriter />} />
         <Route path="/writers-update/:id" element={<WriterUpdateForm />} />
-        <Route path="/createwriter" element={<CreateWriterForm />} />
+        <Route path="/addwriter" element={<CreateWriterForm />} />
 
         <Route path="/booklist" element={<BookList />} />
-        <Route path="/viewbook/book/:id" element={<ViewBookDetail />} />
+        <Route path="/books/:id" element={<ViewBookDetail />} />
         <Route
           path="/update-book/book/:id"
           element={<BookDetailUpdatieForm />}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../../../component/Layout";
 import {
   Search,
@@ -22,6 +22,7 @@ const Viewkalam = () => {
   const [sortConfig, setSortConfig] = useState({ key: "Title", direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchKalaams = async () => {
@@ -96,6 +97,12 @@ const Viewkalam = () => {
           </h2>
 
           <div className="flex gap-4">
+            <button
+              onClick={() => navigate('/kalam')}
+              className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base"
+            >
+              Add Kalam
+            </button>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
@@ -184,6 +191,7 @@ const Viewkalam = () => {
                       ))}
                   </div>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -195,12 +203,21 @@ const Viewkalam = () => {
                     <td className="px-6 py-4">{kalaam.CategoryName}</td>
                     <td className="px-6 py-4">{kalaam.GroupName}</td>
                     <td className="px-6 py-4">{kalaam.CreatedOn || "-"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap flex gap-2">
+                      <button
+                        onClick={() => navigate(`/kalaam/${kalaam.KalaamID}`)}
+                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                        title="View Kalam"
+                      >
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="px-6 py-4 text-center text-sm text-gray-500"
                   >
                     No kalaam found

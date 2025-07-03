@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../../../component/Layout";
 import {
   Type,
@@ -27,6 +27,7 @@ export default function CreateSection() {
   const [sectionDescription, setSectionDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,6 +83,14 @@ export default function CreateSection() {
     <Layout>
       <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-6">
+          {/* Back Button */}
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
+          >
+            ← Back
+          </button>
           {/* Breadcrumb Navigation */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link to="/dashboard" className="hover:text-foreground">

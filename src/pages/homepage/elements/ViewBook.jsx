@@ -1,132 +1,100 @@
 import React, { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  deleteDoc,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
-import { db } from "../../firebase/firebaseConfig";
 import Swal from "sweetalert2";
 import Layout from "../../../component/Layout";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 export default function ViewBooks() {
   const [books, setBooks] = useState([]);
-  const [editId, setEditId] = useState(null);
-  const [editData, setEditData] = useState({});
-
-  const fetchBooks = async () => {
-    const snapshot = await getDocs(collection(db, "books"));
-    const list = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setBooks(list);
-  };
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const fetchBooks = async () => {
+      setLoading(true);
+      try {
+        // Replace with your actual API endpoint
+        const response = await axios.get("http://localhost:5000/api/books");
+        setBooks(response.data);
+      } catch (error) {
+        Swal.fire("Error", "Failed to fetch books", "error");
+        setBooks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchBooks();
   }, []);
 
-  const handleEditChange = (e) => {
-    setEditData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleUpdate = async (id) => {
-    try {
-      await updateDoc(doc(db, "books", id), {
-        ...editData,
-        modifiedOn: new Date(),
-      });
-      setEditId(null);
-      Swal.fire("Success", "Book updated!", "success");
-      fetchBooks();
-    } catch (err) {
-      Swal.fire("Error", err.message, "error");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await deleteDoc(doc(db, "books", id));
-      Swal.fire("Deleted!", "Book removed", "success");
-      fetchBooks();
-    } catch (err) {
-      Swal.fire("Error", err.message, "error");
-    }
-  };
-
-  const navigate = useNavigate();
-
   return (
     <Layout>
-    <div className="max-w-5xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
-      <h2 className="text-2xl font-bold mb-6 text-center">Books List</h2>
-      {books.map((book) => (
-        <div
-          key={book.id}
-          className="border-b py-4 mb-4 flex flex-col md:flex-row justify-between gap-4"
-        >
-          {editId === book.id ? (
-            <div className="flex flex-col w-full gap-2">
-              <input
-                name="bookName"
-                value={editData.bookName}
-                onChange={handleEditChange}
-                placeholder="Book Name"
-                className="border px-2 py-1 rounded"
-              />
-              <textarea
-                name="aboutBook"
-                value={editData.aboutBook}
-                onChange={handleEditChange}
-                placeholder="About Book"
-                className="border px-2 py-1 rounded"
-              />
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={() => handleUpdate(book.id)}
-                  className="bg-green-600 text-white px-3 py-1 rounded"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditId(null)}
-                  className="bg-gray-500 text-white px-3 py-1 rounded"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold">{book.bookName}</h3>
-                <p className="text-sm text-gray-600">{book.aboutBook}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                 onClick={() => navigate(`/edit-book/${book.id}`)}
-                  className="bg-yellow-500 text-white px-3 py-1 rounded"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(book.id)}
-                  className="bg-red-600 text-white px-3 py-1 rounded"
-                >
-                  Delete
-                </button>
-              </div>
-            </>
-          )}
+      <div className="max-w-5xl mx-auto mt-10 bg-white p-6 rounded-xl shadow">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-center">Books List</h2>
+          <button
+            onClick={() => navigate('/addbook')}
+            className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base"
+          >
+            Add Book
+          </button>
         </div>
-      ))}
-    </div>
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-200 text-sm">
+              <thead className="bg-gray-100 text-gray-700 text-sm font-semibold">
+                <tr>
+                  <th className="py-3 px-4 border-b text-left">Cover</th>
+                  <th className="py-3 px-4 border-b text-left">Title</th>
+                  <th className="py-3 px-4 border-b text-left">Author</th>
+                  <th className="py-3 px-4 border-b text-left">Language</th>
+                  <th className="py-3 px-4 border-b text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {books.length > 0 ? (
+                  books.map((book) => (
+                    <tr key={book.BookID} className="hover:bg-gray-50">
+                      <td className="py-3 px-4 border-b">
+                        {book.CoverImageURL ? (
+                          <img
+                            src={book.CoverImageURL}
+                            alt={book.Title}
+                            className="w-20 h-28 object-cover rounded shadow"
+                          />
+                        ) : (
+                          <span className="text-gray-400">No Image</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 border-b font-semibold">{book.Title}</td>
+                      <td className="py-3 px-4 border-b">{book.AuthorName}</td>
+                      <td className="py-3 px-4 border-b">{book.LanguageName}</td>
+                      <td className="py-3 px-4 border-b whitespace-nowrap flex gap-2">
+                        <button
+                          onClick={() => navigate(`/books/${book.BookID}`)}
+                          className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                          title="View Book"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="text-center py-6 text-gray-500">
+                      No books found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </Layout>
   );
 }

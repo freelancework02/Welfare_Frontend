@@ -1,34 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/firebaseConfig';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../../component/Layout';
-import { ArrowLeft } from 'lucide-react';
+import Swal from 'sweetalert2';
+import axios from 'axios';
 
-const KalamDetail = () => {
+export default function KalamDetail() {
   const { id } = useParams();
-  const [article, setArticle] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [kalam, setKalam] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchArticle = async () => {
+    const fetchKalam = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const docRef = doc(db, 'kalamPosts', id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setArticle({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          console.error('No such document!');
-        }
-      } catch (error) {
-        console.error('Error fetching article:', error);
+        const response = await axios.get(`http://localhost:5000/api/kalaam/${id}`);
+        setKalam(response.data);
+      } catch (err) {
+        setError("Failed to fetch kalam");
+        Swal.fire("Error", "Failed to fetch kalam", "error");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchArticle();
+    fetchKalam();
   }, [id]);
 
   if (loading) {
@@ -41,60 +38,56 @@ const KalamDetail = () => {
     );
   }
 
-  if (!article) {
+  if (error) {
     return (
       <Layout>
-        <div className="p-6 text-center text-gray-600">Article not found.</div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-red-500 text-lg">{error}</div>
+        </div>
       </Layout>
     );
   }
 
+  if (!kalam) return null;
+
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow mt-8">
-        <Link to="/viewkalam" className="text-blue-500 flex items-center mb-4 hover:underline">
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Kalam List
-        </Link>
-
-        <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
-
-        <div className="text-sm text-gray-500 mb-2">
-          <span className="mr-4">Writer: {article.writers}</span>
-          <span className="mr-4">Topic: {article.topic || 'N/A'}</span>
-          <span className="mr-4">Language: {article.language}</span>
-          <span>Status: {article.published ? 'Published' : 'Draft'}</span>
+      <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-lg p-8 mt-8">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
+        >
+          ← Back
+        </button>
+        <h1 className="text-3xl font-bold mb-2 text-center">{kalam.Title}</h1>
+        <div className="flex flex-wrap justify-center gap-4 mb-4 text-gray-600 text-sm">
+          <span>By <span className="font-semibold">{kalam.WriterName || '-'}</span></span>
+          <span>Category: <span className="font-semibold">{kalam.CategoryName || '-'}</span></span>
+          {kalam.GroupName && <span>Group: <span className="font-semibold">{kalam.GroupName}</span></span>}
+          {kalam.SectionName && <span>Section: <span className="font-semibold">{kalam.SectionName}</span></span>}
         </div>
-
-        {article.tags && article.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2 mb-4">
-            {article.tags.map((tag, index) => (
-              <span
-                key={index}
-                className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full"
-              >
-                #{tag}
-              </span>
-            ))}
+        {kalam.ThumbnailURL && (
+          <div className="flex justify-center mb-6">
+            <img
+              src={kalam.ThumbnailURL}
+              alt={kalam.Title}
+              className="rounded shadow max-h-72 object-contain"
+            />
           </div>
         )}
-
-        <div className="border-t pt-4 mt-4 prose max-w-none">
-          {/* Assuming content is in article?.BlogText?.urdu and/or english */}
-          {article?.BlogText?.urdu && (
-            <div className="mb-4 text-right" dir="rtl">
-              <div dangerouslySetInnerHTML={{ __html: article.BlogText.urdu }} />
-            </div>
-          )}
-          {article?.BlogText?.english && (
-            <div className="mb-4" dir="ltr">
-              <div dangerouslySetInnerHTML={{ __html: article.BlogText.english }} />
-            </div>
-          )}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Content (Urdu)</h2>
+          <div className="prose max-w-none border rounded p-4 bg-gray-50" dir="rtl" style={{fontFamily: 'Noto Nastaliq Urdu, serif'}} dangerouslySetInnerHTML={{ __html: kalam.ContentUrdu || '<em>No Urdu content</em>' }} />
+        </div>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Content (English)</h2>
+          <div className="prose max-w-none border rounded p-4 bg-gray-50" dangerouslySetInnerHTML={{ __html: kalam.ContentEnglish || '<em>No English content</em>' }} />
+        </div>
+        <div className="text-right text-gray-500 text-xs mt-8">
+          Created On: {kalam.CreatedOn ? new Date(kalam.CreatedOn).toLocaleString() : '-'}
         </div>
       </div>
     </Layout>
   );
-};
-
-export default KalamDetail;
+}

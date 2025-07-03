@@ -1,57 +1,33 @@
 import { useEffect, useState } from "react";
 import Layout from "../../../component/Layout";
-import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { UserPlus, Pencil, Eye, Trash2 } from "lucide-react";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { db } from "../../firebase/firebaseConfig";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function WriterManagement() {
   const [writers, setWriters] = useState([]);
   const [pageSize, setPageSize] = useState(5);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchWriters = async () => {
+      setLoading(true);
       try {
-        const snapshot = await getDocs(collection(db, "writers"));
-        const writerList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setWriters(writerList);
+        // Replace with your actual API endpoint
+        const response = await axios.get("http://localhost:5000/api/writers");
+        setWriters(response.data);
       } catch (error) {
-        console.error("Error fetching writers:", error);
+        Swal.fire("Error", "Failed to fetch writers", "error");
+        setWriters([]);
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchWriters();
   }, []);
-
-  const handleDeleteWriter = async (id) => {
-    const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (confirm.isConfirmed) {
-      try {
-        await deleteDoc(doc(db, "writers", id));
-        setWriters((prev) => prev.filter((w) => w.id !== id));
-        Swal.fire("Deleted!", "Writer has been deleted.", "success");
-      } catch (error) {
-        console.error("Error deleting writer:", error);
-        Swal.fire("Error", `Failed to delete writer. ${error.message}`, "error");
-      }
-    }
-  };
 
   const stripHtml = (html) => {
     const tempDiv = document.createElement("div");
@@ -60,16 +36,11 @@ export default function WriterManagement() {
   };
 
   const filteredWriters = writers.filter((writer) => {
-    const name = writer.name?.toLowerCase() || "";
-    const designation = writer.designation?.toLowerCase() || "";
-    const englishDesc = writer.englishDescription?.toLowerCase() || "";
-    const urduDesc = writer.urduDescription?.toLowerCase() || "";
-
+    const name = writer.Name?.toLowerCase() || "";
+    const bio = stripHtml(writer.Bio)?.toLowerCase() || "";
     return (
       name.includes(searchQuery.toLowerCase()) ||
-      designation.includes(searchQuery.toLowerCase()) ||
-      englishDesc.includes(searchQuery.toLowerCase()) ||
-      urduDesc.includes(searchQuery.toLowerCase())
+      bio.includes(searchQuery.toLowerCase())
     );
   });
 
@@ -90,11 +61,10 @@ export default function WriterManagement() {
         <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
           <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800">Writer Management</h2>
           <button
-            onClick={() => navigate(`/createwriter`)}
-            className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base flex items-center gap-2"
+            onClick={() => navigate('/addwriter')}
+            className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base"
           >
-            <UserPlus className="w-5 h-5" />
-            Add New Writer
+            Add writer
           </button>
         </div>
 
@@ -132,70 +102,58 @@ export default function WriterManagement() {
 
         {/* Table */}
         <div className="overflow-x-auto rounded-lg border shadow-sm">
-          <table className="w-full min-w-[900px] border border-gray-300">
-            <thead className="bg-gray-50 text-gray-700 text-sm font-semibold">
-              <tr>
-                <th className="text-left p-3 border text-lg">Image</th>
-                <th className="text-left p-3 border text-lg">Name</th>
-                <th className="text-left p-3 border text-lg">Urdu Description</th>
-                <th className="text-left p-3 border text-lg">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedWriters.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            <table className="w-full min-w-[600px] border border-gray-300">
+              <thead className="bg-gray-50 text-gray-700 text-sm font-semibold">
                 <tr>
-                  <td colSpan="6" className="text-center p-4 text-gray-500">
-                    No writers found
-                  </td>
+                  <th className="text-left p-3 border text-lg">Image</th>
+                  <th className="text-left p-3 border text-lg">Name</th>
+                  <th className="text-left p-3 border text-lg">Bio</th>
+                  <th className="text-left p-3 border text-lg">Actions</th>
                 </tr>
-              ) : (
-                paginatedWriters.map((writer) => (
-                  <tr key={writer.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 border text-lg">
-                      <img
-                        src={writer.imageURL || "/placeholder.jpg"}
-                        alt={writer.name}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    </td>
-                    <td className="p-3 border text-lg">{writer.writerName}</td>
-                   
-                   
-                    <td
-                      className="p-3 border text-lg text-right"
-                      title={stripHtml(writer.aboutWriter)}
-                    >
-                      {stripHtml(writer.aboutWriter).length > 300
-                        ? `${stripHtml(writer.aboutWriter).substring(0, 300)}...`
-                        : stripHtml(writer.aboutWriter)}
-                    </td>
-                    <td className="p-3 border text-lg">
-                      <div className="flex space-x-3">
-                        <button
-                          onClick={() => navigate(`/viewwriters/${writer.id}`)}
-                          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/writers-update/${writer.id}`)}
-                          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteWriter(writer.id)}
-                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {paginatedWriters.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="text-center p-4 text-gray-500">
+                      No writers found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  paginatedWriters.map((writer) => (
+                    <tr key={writer.WriterID} className="border-t hover:bg-gray-50">
+                      <td className="p-3 border text-lg">
+                        <img
+                          src={writer.ProfileImageURL || "/placeholder.jpg"}
+                          alt={writer.Name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      </td>
+                      <td className="p-3 border text-lg">{writer.Name}</td>
+                      <td className="p-3 border text-lg text-right" title={stripHtml(writer.Bio)}>
+                        {stripHtml(writer.Bio).length > 300
+                          ? `${stripHtml(writer.Bio).substring(0, 300)}...`
+                          : stripHtml(writer.Bio)}
+                      </td>
+                      <td className="p-3 border text-lg whitespace-nowrap flex gap-2">
+                        <button
+                          onClick={() => navigate(`/writers/${writer.WriterID}`)}
+                          className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                          title="View Writer"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}

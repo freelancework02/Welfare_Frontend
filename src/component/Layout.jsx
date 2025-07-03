@@ -5,18 +5,14 @@ import { Menu, X, FileText, BookMarked, PenLine } from 'lucide-react';
 
 
 const sidebarLinks = [
-  { label: 'Articles', icon: FileText, path: '/' },
   { label: 'View Articles', icon: FileText, path: '/viewarticle' },
-  { label: 'Add Kalam', icon: PenLine, path: '/kalam' },
   { label: 'View Kalam', icon: PenLine, path: '/viewkalam' },
-  { label: 'Create Category', icon: BookMarked, path: '/category' },
-  { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
-  { label: 'Add Book', icon: BookMarked, path: '/addbook' },
+  { label: 'Category', icon: BookMarked, path: '/viewcategory' },
   { label: 'View Book', icon: BookMarked, path: '/viewbook' },
   { label: 'Writers', icon: BookMarked, path: '/writers' },
-  { label: 'Add Section', icon: BookMarked, path: '/section' },
-  { label: 'Add Group', icon: BookMarked, path: '/group' },
-  { label: 'Add Topic', icon: BookMarked, path: '/topic' },
+  { label: 'Section', icon: BookMarked, path: '/viewsection' },
+  { label: 'Group', icon: BookMarked, path: '/viewgroup' },
+  { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
 ];
 
 const Layout = ({ children }) => {
@@ -39,7 +35,7 @@ const Layout = ({ children }) => {
       <aside className={`fixed top-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:relative md:flex md:h-full overflow-y-auto h-screen`}>
         <div className="p-6 border-b flex justify-center items-center relative">
-          <h2 className="text-xl font-bold">Content Manager</h2>
+          <h2 className="text-xl font-bold">Admin Dashboard</h2>
           <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 md:hidden">
             <X className="w-5 h-5 text-black" />
           </button>

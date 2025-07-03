@@ -93,6 +93,7 @@ const ViewArticleList = () => {
                 <th className="py-3 px-4 border-b text-left">Urdu Description</th>
                 <th className="py-3 px-4 border-b text-left">Writers</th>
                 <th className="py-3 px-4 border-b text-left">Translators</th>
+                <th className="py-3 px-4 border-b text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -107,7 +108,7 @@ const ViewArticleList = () => {
                     <td className="py-3 px-4 border-b">{article.Title}</td>
                     <td className="py-3 px-4 border-b">
                       {article.ThumbnailURL ? (
-                        <img src={getImageSrc(article.ThumbnailURL)} alt={article.Title} className="w-16 h-auto object-cover" />
+                        <img src={article.ThumbnailURL} alt={article.Title} className="w-16 h-auto object-cover" />
                       ) : "N/A"}
                     </td>
                     <td className="py-3 px-4 border-b max-w-[200px]">
@@ -122,6 +123,15 @@ const ViewArticleList = () => {
                     </td>
                     <td className="py-3 px-4 border-b">{article.WriterName}</td>
                     <td className="py-3 px-4 border-b">{article.TranslatorName || "-"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap flex gap-2">
+                      <button
+                        onClick={() => navigate(`/articles/${article.ArticleID}`)}
+                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                        title="View Article"
+                      >
+                        View Article
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
