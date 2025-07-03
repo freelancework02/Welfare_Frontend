@@ -29,7 +29,7 @@ const Viewkalam = () => {
       setLoading(true);
       try {
         // Replace with your actual API endpoint
-        const response = await axios.get("http://localhost:5000/api/kalaam");
+        const response = await axios.get("https://updated-naatacademy.onrender.com/api/kalaam");
         setKalaams(response.data);
       } catch (error) {
         Swal.fire("Error", "Failed to fetch kalaams", "error");

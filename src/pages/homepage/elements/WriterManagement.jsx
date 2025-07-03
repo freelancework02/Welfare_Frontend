@@ -17,7 +17,7 @@ export default function WriterManagement() {
       setLoading(true);
       try {
         // Replace with your actual API endpoint
-        const response = await axios.get("http://localhost:5000/api/writers");
+        const response = await axios.get("https://updated-naatacademy.onrender.com/api/writers");
         setWriters(response.data);
       } catch (error) {
         Swal.fire("Error", "Failed to fetch writers", "error");

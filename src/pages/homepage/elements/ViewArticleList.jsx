@@ -17,7 +17,7 @@ const ViewArticleList = () => {
       setLoading(true);
       try {
         // Replace with your actual API endpoint
-        const response = await axios.get('http://localhost:5000/api/articles');
+        const response = await axios.get('https://updated-naatacademy.onrender.com/api/articles');
         setArticles(response.data);
       } catch (error) {
         Swal.fire('Error', 'Failed to fetch articles', 'error');

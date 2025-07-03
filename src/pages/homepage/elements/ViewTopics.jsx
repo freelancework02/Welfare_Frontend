@@ -19,7 +19,7 @@ const ViewTopics = () => {
       setLoading(true);
       try {
         // Replace with your actual API endpoint
-        const response = await axios.get('http://localhost:5000/api/topics');
+        const response = await axios.get('https://updated-naatacademy.onrender.com/api/topics');
         setTopics(response.data);
       } catch (error) {
         Swal.fire('Error', 'Failed to fetch topics', 'error');

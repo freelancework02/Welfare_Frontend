@@ -68,7 +68,7 @@ export default function CreateTopic() {
     }
     setIsSubmitting(true);
     try {
-      const response = await axios.post("http://localhost:5000/api/topics", form);
+      const response = await axios.post("https://updated-naatacademy.onrender.com/api/topics", form);
       if (response.data.success) {
         Swal.fire("Success", "Topic created successfully!", "success");
         setForm({

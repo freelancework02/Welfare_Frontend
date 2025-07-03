@@ -176,7 +176,7 @@ export default function CreateCategory() {
 
       console.log("Sending payload:", payload);
 
-      const response = await axios.post("http://localhost:5000/api/categories", payload);
+      const response = await axios.post("https://updated-naatacademy.onrender.com/api/categories", payload);
 
       if (response.data.success) {
         Swal.fire({

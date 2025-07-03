@@ -171,7 +171,7 @@ export default function CreateWriterForm() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/writers",
+        "https://updated-naatacademy.onrender.com/api/writers",
         formDataToSend,
         {
           headers: {

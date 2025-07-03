@@ -137,7 +137,7 @@ export default function AddBook() {
         const formData = new FormData();
         formData.append('image', imageFile);
         try {
-          const uploadResponse = await axios.post('http://localhost:5000/api/upload', formData, {
+          const uploadResponse = await axios.post('https://updated-naatacademy.onrender.com/api/upload', formData, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
@@ -182,7 +182,7 @@ export default function AddBook() {
         Description: description,
       };
       // Submit book
-      const response = await axios.post('http://localhost:5000/api/books', bookData);
+      const response = await axios.post('https://updated-naatacademy.onrender.com/api/books', bookData);
       if (response.data.success) {
         Swal.fire({
           icon: "success",

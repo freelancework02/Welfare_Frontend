@@ -14,7 +14,7 @@ export default function ViewBooks() {
       setLoading(true);
       try {
         // Replace with your actual API endpoint
-        const response = await axios.get("http://localhost:5000/api/books");
+        const response = await axios.get("https://updated-naatacademy.onrender.com/api/books");
         setBooks(response.data);
       } catch (error) {
         Swal.fire("Error", "Failed to fetch books", "error");

@@ -6,11 +6,40 @@ import {
   FileText,
   Save,
   AlertCircle,
-  Info
+  Info,
+  Upload
 } from "lucide-react";
 import Swal from "sweetalert2";
 import axios from "axios";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
+// Quill Configuration
+const modules = {
+  toolbar: [
+    [{ font: [] }],
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ color: [] }, { background: [] }],
+    [{ script: "sub" }, { script: "super" }],
+    [{ align: [] }],
+    [{ list: "ordered" }, { list: "bullet" }],
+    [{ indent: "-1" }, { indent: "+1" }],
+    ["link", "image"],
+    ["clean"]
+  ]
+};
+
+const formats = [
+  "font", "header",
+  "bold", "italic", "underline", "strike",
+  "color", "background",
+  "script", "align",
+  "list", "bullet", "indent",
+  "link", "image"
+];
+
+// Field Component
 function Field({ label, icon, children, required, helpText }) {
   return (
     <div className="space-y-2">
@@ -32,19 +61,30 @@ function Field({ label, icon, children, required, helpText }) {
 export default function CreateGroup() {
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
+  const [groupImage, setGroupImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setGroupImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate group name
+
     if (!groupName.trim()) {
       Swal.fire({
         icon: "warning",
         title: "Required Field",
-        text: "Group name is required.",
+        text: "Group name is required."
       });
       return;
     }
@@ -53,9 +93,15 @@ export default function CreateGroup() {
     setError("");
 
     try {
-      const response = await axios.post("http://localhost:5000/api/groups", {
-        GroupName: groupName.trim(),
-        GroupDescription: groupDescription.trim() || null
+      const formData = new FormData();
+      formData.append("GroupName", groupName.trim());
+      formData.append("GroupDescription", groupDescription || "");
+      if (groupImage) {
+        formData.append("image", groupImage);
+      }
+
+      const response = await axios.post("https://updated-naatacademy.onrender.com/api/groups", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
       if (response.data.success) {
@@ -70,18 +116,16 @@ export default function CreateGroup() {
         // Reset form
         setGroupName("");
         setGroupDescription("");
+        setGroupImage(null);
+        setImagePreview(null);
       } else {
         throw new Error(response.data.message || "Failed to create group");
       }
-    } catch (error) {
-      console.error("Error creating group:", error);
-      setError(error.response?.data?.message || "Failed to create group. Please try again.");
-      
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: error.response?.data?.message || "Failed to create group. Please try again.",
-      });
+    } catch (err) {
+      console.error("Error creating group:", err);
+      const errMsg = err.response?.data?.message || "Failed to create group. Please try again.";
+      setError(errMsg);
+      Swal.fire({ icon: "error", title: "Error", text: errMsg });
     } finally {
       setIsSubmitting(false);
     }
@@ -99,23 +143,19 @@ export default function CreateGroup() {
           >
             ← Back
           </button>
-          {/* Breadcrumb Navigation */}
+
+          {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <Link to="/dashboard" className="hover:text-foreground">
-              Dashboard
-            </Link>
+            <Link to="/dashboard" className="hover:text-foreground">Dashboard</Link>
             <span>&gt;</span>
-            <Link to="/groups" className="hover:text-foreground">
-              Groups
-            </Link>
+            <Link to="/groups" className="hover:text-foreground">Groups</Link>
             <span>&gt;</span>
             <span className="text-foreground">Create Group</span>
           </nav>
 
-          {/* Main Content */}
+          {/* Form Card */}
           <div className="max-w-2xl mx-auto">
             <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100">
-              {/* Header */}
               <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
                 <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                   <Users className="w-6 h-6" />
@@ -124,18 +164,17 @@ export default function CreateGroup() {
                 <p className="text-purple-100 mt-1">Create a new group to organize your content</p>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                    <p>{error}</p>
+                    <AlertCircle className="w-5 h-5" />
+                    {error}
                   </div>
                 )}
 
-                <Field 
-                  label="Group Name" 
-                  icon={<Users className="w-4 h-4" />} 
+                <Field
+                  label="Group Name"
+                  icon={<Users className="w-4 h-4" />}
                   required
                   helpText="Choose a unique and descriptive name for your group"
                 >
@@ -149,36 +188,58 @@ export default function CreateGroup() {
                   />
                 </Field>
 
-                <Field 
-                  label="Description" 
+                <Field
+                  label="Description"
                   icon={<FileText className="w-4 h-4" />}
                   helpText="Provide additional details about the group's purpose"
                 >
-                  <textarea
-                    value={groupDescription}
-                    onChange={(e) => setGroupDescription(e.target.value)}
-                    placeholder="Enter group description (optional)"
-                    rows="4"
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all resize-none"
-                    disabled={isSubmitting}
-                  />
+                  <div className="border rounded-lg overflow-hidden">
+                    <ReactQuill
+                      value={groupDescription}
+                      onChange={setGroupDescription}
+                      modules={modules}
+                      formats={formats}
+                      theme="snow"
+                      placeholder="Enter group description (optional)"
+                      readOnly={isSubmitting}
+                      className="bg-white"
+                      style={{ height: "200px" }}
+                    />
+                  </div>
                 </Field>
 
-                {/* Submit Button */}
+                <Field
+                  label="Group Image"
+                  icon={<Upload className="w-4 h-4" />}
+                  helpText="Upload an image for the group (optional)"
+                >
+                  <div className="space-y-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full"
+                      disabled={isSubmitting}
+                    />
+                    {imagePreview && (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-w-xs rounded-lg border border-gray-200"
+                      />
+                    )}
+                  </div>
+                </Field>
+
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`
-                      flex items-center gap-2 px-6 py-2 rounded-lg text-white
-                      ${isSubmitting 
-                        ? 'bg-purple-400 cursor-not-allowed' 
-                        : 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800'
-                      }
-                      transition-all duration-200 ease-in-out
-                      transform hover:scale-105 active:scale-100
-                      shadow-md hover:shadow-lg
-                    `}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-lg text-white ${
+                      isSubmitting
+                        ? "bg-purple-400 cursor-not-allowed"
+                        : "bg-purple-600 hover:bg-purple-700 active:bg-purple-800"
+                    } transition-all duration-200 transform hover:scale-105 active:scale-100 shadow-md hover:shadow-lg`}
                   >
                     <Save className="w-5 h-5" />
                     {isSubmitting ? "Creating..." : "Create Group"}
@@ -195,16 +256,16 @@ export default function CreateGroup() {
               </h2>
               <ul className="space-y-2 text-purple-600">
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
-                  Choose clear and descriptive names for easy identification
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                  Use unique and meaningful group names.
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
-                  Add detailed descriptions to help users understand the group's purpose
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                  Add descriptions to help users understand purpose.
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
-                  Use groups to organize related content effectively
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                  Upload relevant images to improve user experience.
                 </li>
               </ul>
             </div>

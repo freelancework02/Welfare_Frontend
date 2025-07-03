@@ -15,7 +15,7 @@ export default function CategoryDisplay() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("http://localhost:5000/api/categories");
+        const response = await axios.get("https://updated-naatacademy.onrender.com/api/categories");
         setCategories(response.data);
       } catch (err) {
         setError("Failed to fetch categories");
