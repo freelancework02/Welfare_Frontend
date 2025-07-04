@@ -131,6 +131,13 @@ const ViewArticleList = () => {
                       >
                         View Article
                       </button>
+                      <button
+                        onClick={() => navigate(`/articles/${article.ArticleID}/edit`)}
+                        className="text-yellow-600 hover:text-yellow-900 border border-yellow-600 px-3 py-1 rounded transition"
+                        title="Edit Article"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))

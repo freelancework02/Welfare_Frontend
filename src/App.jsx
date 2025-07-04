@@ -65,6 +65,7 @@ import ViewBookDetail from "./pages/homepage/elements/ViewBookDetail";
 import SectionDetail from "./pages/homepage/elements/SectionDetail";
 import GroupDetail from "./pages/homepage/elements/GroupDetail";
 import TopicDetail from "./pages/homepage/elements/TopicDetail";
+import EditArticlePage from "./pages/homepage/elements/EditArticlePage";
 
 const App = () => {
   return (
@@ -93,6 +94,7 @@ const App = () => {
         <Route path="/edit-kalam/:id" element={<Editkalam />} />
         <Route path="/edit-article/:id" element={<EditArticle />} />
         {/* <Route path="/viewkalam/:id" element={<KalamDetail />} /> */}
+        <Route path="/articles/:id/edit" element={<EditArticlePage />} />
         <Route path="/addbook" element={<AddBook />} />
         <Route path="/viewbook" element={<ViewBooks />} />
         <Route path="/edit-book/:id" element={<EditBook />} />
