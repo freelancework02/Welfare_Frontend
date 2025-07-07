@@ -13,6 +13,7 @@ const sidebarLinks = [
   { label: 'Section', icon: BookMarked, path: '/viewsection' },
   { label: 'Group', icon: BookMarked, path: '/viewgroup' },
   { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
+  { label: 'Languages', icon: BookMarked, path: '/viewlang' },
 ];
 
 const Layout = ({ children }) => {

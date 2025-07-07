@@ -10,22 +10,53 @@ export default function SectionDisplay() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const fetchSections = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get("https://updated-naatacademy.onrender.com/api/sections");
+      setSections(response.data);
+    } catch (err) {
+      setError("Failed to fetch sections");
+      Swal.fire("Error", "Failed to fetch sections", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchSections = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get("https://updated-naatacademy.onrender.com/api/sections");
-        setSections(response.data);
-      } catch (err) {
-        setError("Failed to fetch sections");
-        Swal.fire("Error", "Failed to fetch sections", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSections();
   }, []);
+
+  const handleDelete = async (sectionId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/sections/${sectionId}`);
+        await Swal.fire(
+          'Deleted!',
+          'Section has been deleted.',
+          'success'
+        );
+        fetchSections(); // Refresh the list
+      }
+    } catch (error) {
+      Swal.fire(
+        'Error',
+        'Failed to delete the section.',
+        'error'
+      );
+    }
+  };
 
   return (
     <Layout>
@@ -74,6 +105,20 @@ export default function SectionDisplay() {
                           title="View Section"
                         >
                           View
+                        </button>
+                        <button
+                          onClick={() => navigate(`/sections/edit/${section.SectionID}`)}
+                          className="text-green-600 hover:text-green-900 border border-green-600 px-3 py-1 rounded transition"
+                          title="Edit Section"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(section.SectionID)}
+                          className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition"
+                          title="Delete Section"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

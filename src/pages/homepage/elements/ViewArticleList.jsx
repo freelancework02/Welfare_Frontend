@@ -13,21 +13,21 @@ const ViewArticleList = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchArticles = async () => {
-      setLoading(true);
-      try {
-        // Replace with your actual API endpoint
-        const response = await axios.get('https://updated-naatacademy.onrender.com/api/articles');
-        setArticles(response.data);
-      } catch (error) {
-        Swal.fire('Error', 'Failed to fetch articles', 'error');
-        setArticles([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchArticles();
   }, []);
+
+  const fetchArticles = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('https://updated-naatacademy.onrender.com/api/articles');
+      setArticles(response.data);
+    } catch (error) {
+      Swal.fire('Error', 'Failed to fetch articles', 'error');
+      setArticles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -39,10 +39,15 @@ const ViewArticleList = () => {
       cancelButtonColor: '#3085d6',
       confirmButtonText: 'Yes, delete it!'
     });
+
     if (result.isConfirmed) {
-      // TODO: Replace with API call to delete article
-      setArticles(articles.filter(article => article.ArticleID !== id));
-      Swal.fire('Deleted!', 'The article has been deleted.', 'success');
+      try {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/articles/${id}`);
+        await fetchArticles(); // Refresh the list after deletion
+        Swal.fire('Deleted!', 'The article has been deleted.', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'Failed to delete the article', 'error');
+      }
     }
   };
 
@@ -55,8 +60,8 @@ const ViewArticleList = () => {
 
   const truncateText = (text, maxLength = 100) => {
     const plainText = stripHtml(text);
-    return plainText.length > maxLength 
-      ? plainText.substring(0, maxLength) + '...' 
+    return plainText.length > maxLength
+      ? plainText.substring(0, maxLength) + '...'
       : plainText;
   };
 
@@ -72,14 +77,12 @@ const ViewArticleList = () => {
     }
   };
 
-  const getImageSrc = (imageUrl) => imageUrl || '';
-
   return (
     <Layout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Articles</h1>
-          <a href="/" className="bg-green-500 text-white px-4 py-2 rounded-md text-sm">+ Add Article</a>
+          <a href="/addarticle" className="bg-green-500 text-white px-4 py-2 rounded-md text-sm">+ Add Article</a>
         </div>
 
         <div className="overflow-x-auto">
@@ -99,7 +102,7 @@ const ViewArticleList = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-6 text-gray-500">Loading articles...</td>
+                  <td colSpan="8" className="text-center py-6 text-gray-500">Loading articles...</td>
                 </tr>
               ) : currentArticles.length > 0 ? (
                 currentArticles.map((article, index) => (
@@ -126,24 +129,34 @@ const ViewArticleList = () => {
                     <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                       <button
                         onClick={() => navigate(`/articles/${article.ArticleID}`)}
-                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition flex items-center gap-1"
                         title="View Article"
                       >
-                        View Article
+                        <Eye size={16} />
+                        View
                       </button>
                       <button
                         onClick={() => navigate(`/articles/${article.ArticleID}/edit`)}
-                        className="text-yellow-600 hover:text-yellow-900 border border-yellow-600 px-3 py-1 rounded transition"
+                        className="text-yellow-600 hover:text-yellow-900 border border-yellow-600 px-3 py-1 rounded transition flex items-center gap-1"
                         title="Edit Article"
                       >
+                        <Pencil size={16} />
                         Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(article.ArticleID)}
+                        className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition flex items-center gap-1"
+                        title="Delete Article"
+                      >
+                        <Trash2 size={16} />
+                        Delete
                       </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="text-center py-6 text-gray-500">No articles found.</td>
+                  <td colSpan="8" className="text-center py-6 text-gray-500">No articles found.</td>
                 </tr>
               )}
             </tbody>

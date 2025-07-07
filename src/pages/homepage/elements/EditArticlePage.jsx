@@ -119,7 +119,7 @@ export default function EditArticlePage() {
         setIsLoading(true);
         
         // Fetch the article
-        const articleResponse = await axios.get(`http://localhost:5000/api/articles/${id}`);
+        const articleResponse = await axios.get(`https://updated-naatacademy.onrender.com/api/articles/${id}`);
         const article = articleResponse.data;
         
         // Set all the article fields
@@ -145,7 +145,7 @@ export default function EditArticlePage() {
           title: "Error",
           text: "Failed to load article data. Please try again.",
         }).then(() => {
-          navigate('/articles');
+          navigate('/viewarticle');
         });
       }
     };
@@ -202,7 +202,7 @@ export default function EditArticlePage() {
         formData.append('image', imageFile);
 
         try {
-          const uploadResponse = await axios.post('http://localhost:5000/api/upload', formData, {
+          const uploadResponse = await axios.post('https://updated-naatacademy.onrender.com/api/upload', formData, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
@@ -253,7 +253,7 @@ export default function EditArticlePage() {
       console.log('Sending article update data:', articleData);
 
       // Update article
-      const response = await axios.put(`http://localhost:5000/api/articles/${id}`, articleData);
+      const response = await axios.put(`https://updated-naatacademy.onrender.com/api/articles/${id}`, articleData);
 
       if (response.data.success) {
         Swal.fire({
@@ -262,7 +262,7 @@ export default function EditArticlePage() {
           text: "Article updated successfully!",
           timer: 2000
         }).then(() => {
-          navigate('/articles');
+          navigate('/viewarticle');
         });
       } else {
         throw new Error(response.data.message || 'Failed to update article');

@@ -11,21 +11,52 @@ export default function CategoryDisplay() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get("https://updated-naatacademy.onrender.com/api/categories");
-        setCategories(response.data);
-      } catch (err) {
-        setError("Failed to fetch categories");
-        Swal.fire("Error", "Failed to fetch categories", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get("https://updated-naatacademy.onrender.com/api/categories");
+      setCategories(response.data);
+    } catch (err) {
+      setError("Failed to fetch categories");
+      Swal.fire("Error", "Failed to fetch categories", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (categoryId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/categories/${categoryId}`);
+        await Swal.fire(
+          'Deleted!',
+          'Category has been deleted.',
+          'success'
+        );
+        fetchCategories(); // Refresh the list
+      }
+    } catch (error) {
+      Swal.fire(
+        'Error',
+        'Failed to delete the category.',
+        'error'
+      );
+    }
+  };
 
   return (
     <Layout>
@@ -86,6 +117,20 @@ export default function CategoryDisplay() {
                           title="View Category"
                         >
                           View
+                        </button>
+                        <button
+                          onClick={() => navigate(`/categories/edit/${cat.CategoryID}`)}
+                          className="text-green-600 hover:text-green-900 border border-green-600 px-3 py-1 rounded transition"
+                          title="Edit Category"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(cat.CategoryID)}
+                          className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition"
+                          title="Delete Category"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

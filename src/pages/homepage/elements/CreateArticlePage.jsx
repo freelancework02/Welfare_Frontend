@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarIcon,
   ImageIcon,
@@ -126,6 +126,7 @@ export default function CreateArticlePage() {
   const [sections, setSections] = useState([]);
   const [topics, setTopics] = useState([]);
   const fileInputRef = useRef();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch writers
@@ -182,17 +183,27 @@ export default function CreateArticlePage() {
       }
 
       // Validate required fields
-      if (!title.trim() || !writerId || !categoryId || !topicName.trim()) {
+      const requiredFields = {
+        Title: title.trim(),
+        WriterID: writerId,
+        CategoryID: categoryId
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value)
+        .map(([key]) => key);
+
+      if (missingFields.length > 0) {
         Swal.fire({
           icon: "warning",
-          title: "Incomplete Fields",
-          text: "Please fill all required fields (Title, Writer, Category, and Topic).",
+          title: "Missing Required Fields",
+          text: `Please fill in the following required fields: ${missingFields.join(', ')}`,
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Ensure WriterID, CategoryID are numbers
+      // Prepare article data
       const articleData = {
         Title: title,
         WriterID: parseInt(writerId),
@@ -206,7 +217,9 @@ export default function CreateArticlePage() {
         GroupName: groupName,
         SectionID: sectionId ? parseInt(sectionId) : null,
         SectionName: sectionName,
-        Topic: topicName
+        Topic: topicName,
+        TopicName: topicName, // Added to match backend schema
+        IsDeleted: 0 // Added to match backend schema
       };
 
       console.log('Sending article data:', articleData);
@@ -223,22 +236,24 @@ export default function CreateArticlePage() {
         });
 
         // Reset form
+        setTitle("");
+        setWriterId("");
+        setWriterName("");
+        setCategoryId("");
+        setCategoryName("");
+        setThumbnailURL("");
+        setImageFile(null);
+        setContentUrdu("");
+        setContentEnglish("");
+        setGroupId("");
+        setGroupName("");
+        setSectionId("");
+        setSectionName("");
+        setTopicName("");
+        
         setTimeout(() => {
-          setTitle("");
-          setWriterId("");
-          setWriterName("");
-          setCategoryId("");
-          setCategoryName("");
-          setThumbnailURL("");
-          setImageFile(null);
-          setContentUrdu("");
-          setContentEnglish("");
-          setGroupId("");
-          setGroupName("");
-          setSectionId("");
-          setSectionName("");
-          setTopicName("");
           setIsSubmitting(false);
+          navigate("/viewarticle");
         }, 2000);
       } else {
         throw new Error(response.data.message || 'Failed to create article');
@@ -249,9 +264,15 @@ export default function CreateArticlePage() {
 
       if (error.response?.data) {
         console.error('Server error details:', error.response.data);
-        errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+        
+        // Handle missing fields error
+        if (error.response.data.missingFields) {
+          errorMessage = `Missing required fields: ${error.response.data.missingFields.join(', ')}`;
+        } else {
+          errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+        }
 
-        // Handle specific SQL errors
+        // Handle SQL errors
         if (error.response.data.sqlError) {
           console.error('SQL Error:', error.response.data.sqlError);
           if (error.response.data.sqlError.includes("doesn't exist")) {
@@ -278,7 +299,7 @@ export default function CreateArticlePage() {
               Dashboard
             </Link>
             <span>&gt;</span>
-            <Link to="/articles" className="hover:text-foreground">
+            <Link to="/viewarticle" className="hover:text-foreground">
               Articles
             </Link>
             <span>&gt;</span>

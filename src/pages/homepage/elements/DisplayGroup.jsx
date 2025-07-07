@@ -10,22 +10,53 @@ export default function DisplayGroup() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const fetchGroups = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get("https://updated-naatacademy.onrender.com/api/groups");
+      setGroups(response.data);
+    } catch (err) {
+      setError("Failed to fetch groups");
+      Swal.fire("Error", "Failed to fetch groups", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchGroups = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get("https://updated-naatacademy.onrender.com/api/groups");
-        setGroups(response.data);
-      } catch (err) {
-        setError("Failed to fetch groups");
-        Swal.fire("Error", "Failed to fetch groups", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchGroups();
   }, []);
+
+  const handleDelete = async (groupId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/groups/${groupId}`);
+        await Swal.fire(
+          'Deleted!',
+          'Group has been deleted.',
+          'success'
+        );
+        fetchGroups(); // Refresh the list
+      }
+    } catch (error) {
+      Swal.fire(
+        'Error',
+        'Failed to delete the group.',
+        'error'
+      );
+    }
+  };
 
   return (
     <Layout>
@@ -74,6 +105,20 @@ export default function DisplayGroup() {
                           title="View Group"
                         >
                           View
+                        </button>
+                        <button
+                          onClick={() => navigate(`/groups/edit/${group.GroupID}`)}
+                          className="text-green-600 hover:text-green-900 border border-green-600 px-3 py-1 rounded transition"
+                          title="Edit Group"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(group.GroupID)}
+                          className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition"
+                          title="Delete Group"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

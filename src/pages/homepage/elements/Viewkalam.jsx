@@ -11,6 +11,7 @@ import {
   User,
   Edit,
   Eye,
+  Trash2
 } from "lucide-react";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -206,10 +207,54 @@ const Viewkalam = () => {
                     <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                       <button
                         onClick={() => navigate(`/kalaam/${kalaam.KalaamID}`)}
-                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition"
+                        className="text-blue-600 hover:text-blue-900 border border-blue-600 px-3 py-1 rounded transition flex items-center gap-1"
                         title="View Kalam"
                       >
+                        <Eye size={16} />
                         View
+                      </button>
+                      <button
+                        onClick={() => navigate(`/kalaam/${kalaam.KalaamID}/edit`)}
+                        className="text-yellow-600 hover:text-yellow-900 border border-yellow-600 px-3 py-1 rounded transition flex items-center gap-1"
+                        title="Edit Kalam"
+                      >
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const result = await Swal.fire({
+                            title: 'Are you sure?',
+                            text: "You won't be able to revert this!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Yes, delete it!'
+                          });
+
+                          if (result.isConfirmed) {
+                            try {
+                              const response = await axios.delete(`https://updated-naatacademy.onrender.com/api/kalaam/${kalaam.KalaamID}`);
+                              
+                              if (response.data.success) {
+                                Swal.fire('Deleted!', 'Kalaam has been deleted.', 'success');
+                                // Refresh the list
+                                const updatedResponse = await axios.get("https://updated-naatacademy.onrender.com/api/kalaam");
+                                setKalaams(updatedResponse.data);
+                              } else {
+                                throw new Error(response.data.message || 'Failed to delete');
+                              }
+                            } catch (error) {
+                              Swal.fire('Error', error.message || 'Failed to delete kalaam', 'error');
+                            }
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition flex items-center gap-1"
+                        title="Delete Kalam"
+                      >
+                        <Trash2 size={16} />
+                        Delete
                       </button>
                     </td>
                   </tr>

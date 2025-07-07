@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import Layout from "../../../component/Layout";
-import { Type, FileText, Save, AlertCircle, Hash, Layers } from "lucide-react";
+import { Type, FileText, Save, AlertCircle, Hash, Layers, ArrowLeft } from "lucide-react";
 import Swal from "sweetalert2";
 import axios from "axios";
 import ReactQuill from "react-quill";
@@ -76,7 +76,10 @@ function Field({ label, icon, children, required, error }) {
   );
 }
 
-export default function CreateCategory() {
+export default function EditCategory() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     Name: "",
     Slug: "",
@@ -89,31 +92,56 @@ export default function CreateCategory() {
   const [groups, setGroups] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch groups for dropdown
+  // Fetch category data and groups
   useEffect(() => {
-    const fetchGroups = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get("https://naatacadmey.onrender.com/api/groups");
-        // Transform the data to ensure consistent property names
-        const transformedGroups = response.data.map(group => ({
+        setIsLoading(true);
+        
+        // Fetch category data and groups in parallel
+        const [categoryRes, groupsRes] = await Promise.all([
+          axios.get(`https://updated-naatacademy.onrender.com/api/categories/${id}`),
+          axios.get("https://naatacadmey.onrender.com/api/groups")
+        ]);
+
+        // Transform groups data to ensure consistent property names
+        const transformedGroups = groupsRes.data.map(group => ({
           ...group,
           GroupID: group.GroupID || group._id,
           GroupName: group.GroupName || group.Name
         }));
-        console.log("Transformed groups:", transformedGroups);
+
         setGroups(transformedGroups);
+
+        // Set category data
+        const category = categoryRes.data;
+        setFormData({
+          Name: category.Name || "",
+          Slug: category.Slug || "",
+          Color: category.Color || "#5a6c17",
+          GroupID: category.GroupID || "",
+          GroupName: category.GroupName || "",
+          Description: category.Description || ""
+        });
+
       } catch (error) {
-        console.error("Error fetching groups:", error);
+        console.error("Error fetching data:", error);
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: "Failed to fetch groups. Please refresh the page.",
+          text: "Failed to fetch category data. Please try again.",
+        }).then(() => {
+          navigate("/viewcategory");
         });
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchGroups();
-  }, []);
+
+    fetchData();
+  }, [id, navigate]);
 
   const generateSlug = (name) => {
     return name
@@ -136,10 +164,8 @@ export default function CreateCategory() {
       if (name === 'GroupID' && value) {
         const selectedGroup = groups.find(g => g.GroupID === value);
         if (selectedGroup) {
-          console.log("Selected group:", selectedGroup);
           newData.GroupID = selectedGroup.GroupID;
           newData.GroupName = selectedGroup.GroupName;
-          console.log("Updated form data:", newData);
         }
       }
       
@@ -174,42 +200,43 @@ export default function CreateCategory() {
         Description: formData.Description || null
       };
 
-      console.log("Sending payload:", payload);
-
-      const response = await axios.post("https://updated-naatacademy.onrender.com/api/categories", payload);
+      const response = await axios.put(`https://updated-naatacademy.onrender.com/api/categories/${id}`, payload);
 
       if (response.data.success) {
         Swal.fire({
           icon: "success",
           title: "Success",
-          text: "Category created successfully!",
+          text: "Category updated successfully!",
           timer: 2000,
           showConfirmButton: false
-        });
-
-        // Reset form
-        setFormData({
-          Name: "",
-          Slug: "",
-          Color: "#5a6c17",
-          GroupID: "",
-          GroupName: "",
-          Description: "",
+        }).then(() => {
+          navigate("/viewcategory");
         });
       }
     } catch (error) {
-      console.error("Error creating category:", error);
+      console.error("Error updating category:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: error.response?.data?.message || "Failed to create category",
+        text: error.response?.data?.message || "Failed to update category",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading category data...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -221,12 +248,23 @@ export default function CreateCategory() {
               Dashboard
             </Link>
             <span>&gt;</span>
-            <Link to="/viewcategory" className="hover:text-foreground">
+            <Link to="/categories" className="hover:text-foreground">
               Categories
             </Link>
             <span>&gt;</span>
-            <span className="text-foreground">Create Category</span>
+            <span className="text-foreground">Edit Category</span>
           </nav>
+
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-bold">Edit Category</h1>
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-green-600 hover:text-green-800"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Categories
+            </button>
+          </div>
 
           <div className="max-w-3xl mx-auto">
             <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100">
@@ -234,10 +272,10 @@ export default function CreateCategory() {
               <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
                 <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                   <Type className="w-6 h-6" />
-                  Create New Category
+                  Edit Category
                 </h1>
                 <p className="text-green-100 mt-1">
-                  Add a new category to organize your content
+                  Update the category details
                 </p>
               </div>
 
@@ -295,33 +333,32 @@ export default function CreateCategory() {
                   </Field>
 
                   <Field 
-                  label="Group" 
-                  icon={<Layers className="w-4 h-4" />}
-                >
-                  <select
-                    name="GroupID"
-                    value={formData.GroupID}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-                    disabled={isSubmitting}
+                    label="Group" 
+                    icon={<Layers className="w-4 h-4" />}
                   >
-                    <option value="">Select Group</option>
-                    {groups.map(group => (
-                      <option 
-                        key={group.GroupID} 
-                        value={group.GroupID}
-                      >
-                        {group.GroupName}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Debug display */}
-                  {formData.GroupID && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      Selected Group: {formData.GroupName}
-                    </p>
-                  )}
-                </Field>
+                    <select
+                      name="GroupID"
+                      value={formData.GroupID}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Group</option>
+                      {groups.map(group => (
+                        <option 
+                          key={group.GroupID} 
+                          value={group.GroupID}
+                        >
+                          {group.GroupName}
+                        </option>
+                      ))}
+                    </select>
+                    {formData.GroupID && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Selected Group: {formData.GroupName}
+                      </p>
+                    )}
+                  </Field>
                 </div>
 
                 <Field
@@ -341,7 +378,15 @@ export default function CreateCategory() {
                   />
                 </Field>
 
-                <div className="flex justify-end pt-6">
+                <div className="flex justify-end pt-6 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/categories")}
+                    className="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
@@ -358,7 +403,7 @@ export default function CreateCategory() {
                     `}
                   >
                     <Save className="w-5 h-5" />
-                    {isSubmitting ? "Creating..." : "Create Category"}
+                    {isSubmitting ? "Updating..." : "Update Category"}
                   </button>
                 </div>
               </form>
@@ -368,20 +413,20 @@ export default function CreateCategory() {
             <div className="mt-6 bg-gradient-to-r from-green-50 to-teal-50 border border-green-100 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5" />
-                Tips for Creating Categories
+                Category Editing Tips
               </h2>
               <ul className="space-y-2 text-green-600">
                 <li className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                  Choose a clear, descriptive name for easy identification
+                  Changing the name will auto-update the slug
                 </li>
                 <li className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                  The slug is automatically generated but can be customized
+                  You can manually edit the slug if needed
                 </li>
                 <li className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                  Use colors to visually distinguish different categories
+                  Update the color to change how this category appears
                 </li>
               </ul>
             </div>

@@ -21,6 +21,7 @@ import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
 import Swal from "sweetalert2";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 // Font registration for Quill
 const Font = Quill.import("formats/font");
@@ -130,15 +131,17 @@ export default function CreateArticlePage() {
   const [postTranslate, setPostTranslate] = useState("");
   const [lineSpacing, setLineSpacing] = useState(2);
 
+  const navigate = useNavigate();
+
   // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [writersRes, categoriesRes, groupsRes, sectionsRes] = await Promise.all([
-          axios.get("https://naatacadmey.onrender.com/api/writers"),
-          axios.get("https://naatacadmey.onrender.com/api/categories"),
-          axios.get("https://naatacadmey.onrender.com/api/groups"),
-          axios.get("https://naatacadmey.onrender.com/api/sections")
+          axios.get("http://localhost:5000/api/writers"),
+          axios.get("http://localhost:5000/api/categories"),
+          axios.get("http://localhost:5000/api/groups"),
+          axios.get("http://localhost:5000/api/sections")
         ]);
 
         setWriters(writersRes.data);
@@ -186,11 +189,22 @@ export default function CreateArticlePage() {
   };
 
   const handleSave = async () => {
-    if (!articleTitle.trim() || !writerId || !categoryId) {
+    // Validate required fields
+    const requiredFields = {
+      Title: articleTitle.trim(),
+      WriterID: writerId,
+      CategoryID: categoryId
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingFields.length > 0) {
       Swal.fire({
         icon: "warning",
-        title: "Incomplete Fields",
-        text: "Please fill all required fields including title, writer and category.",
+        title: "Missing Required Fields",
+        text: `Please fill in the following required fields: ${missingFields.join(', ')}`,
       });
       return;
     }
@@ -200,35 +214,26 @@ export default function CreateArticlePage() {
     try {
       const payload = {
         Title: articleTitle.trim(),
-        Description: description,
-        WriterID: writerId,
+        WriterID: parseInt(writerId),
         WriterName: writerName,
-        CategoryID: categoryId,
+        CategoryID: parseInt(categoryId),
         CategoryName: categoryName,
-        ContentUrdu: formatTextWithSpacing(postUrdu) || null,
-        ContentRomanUrdu: formatTextWithSpacing(postRoman) || null,
-        ContentArabic: formatTextWithSpacing(postArabic) || null,
-        ContentEnglish: formatTextWithSpacing(postEnglish) || null,
-        ContentHindi: formatTextWithSpacing(postHindi) || null,
-        ContentSharha: formatTextWithSpacing(postSharha) || null,
-        ContentTranslate: formatTextWithSpacing(postTranslate) || null,
-        GroupID: groupId || null,
-        GroupName: groupName || null,
-        SectionID: sectionId || null,
-        SectionName: sectionName || null,
+        ContentUrdu: formatTextWithSpacing(postUrdu),
+        ContentRomanUrdu: formatTextWithSpacing(postRoman),
+        ContentArabic: formatTextWithSpacing(postArabic),
+        ContentEnglish: formatTextWithSpacing(postEnglish),
+        GroupID: groupId ? parseInt(groupId) : null,
+        GroupName: groupName,
+        SectionID: sectionId ? parseInt(sectionId) : null,
+        SectionName: sectionName,
         IsFeatured: isFeatured ? 1 : 0,
         IsSelected: isSelected ? 1 : 0,
-        PublicationDate: publicationDate,
-        Language: selectedLanguage
+        IsDeleted: 0
       };
   
       console.log("Payload being sent:", payload);
   
-      const response = await axios.post("https://updated-naatacademy.onrender.com/api/kalaam", payload, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axios.post("http://localhost:5000/api/kalaam", payload);
   
       if (response.data.success) {
         Swal.fire({
@@ -259,15 +264,35 @@ export default function CreateArticlePage() {
         setIsFeatured(false);
         setIsSelected(false);
         setPublicationDate(getCurrentDate());
+
+        setTimeout(() => {
+          setIsSubmitting(false);
+          navigate("/viewkalam");
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || 'Failed to create kalaam');
       }
     } catch (error) {
       console.error("Submission error:", error);
       let errorMessage = "Failed to create kalaam. ";
       
-      if (error.response) {
-        if (error.response.data) {
+      if (error.response?.data) {
+        console.error('Server error details:', error.response.data);
+        
+        // Handle missing fields error
+        if (error.response.data.missingFields) {
+          errorMessage = `Missing required fields: ${error.response.data.missingFields.join(', ')}`;
+        } else {
           errorMessage += error.response.data.message || error.response.data.error || 
-                         `Server error (${error.response.status})`;
+                       `Server error (${error.response.status})`;
+        }
+
+        // Handle SQL errors
+        if (error.response.data.sqlError) {
+          console.error('SQL Error:', error.response.data.sqlError);
+          if (error.response.data.sqlError.includes("doesn't exist")) {
+            errorMessage = "Database configuration error. Please contact support.";
+          }
         }
       } else if (error.request) {
         errorMessage += "No response received from server. Please check your connection.";
@@ -290,11 +315,11 @@ export default function CreateArticlePage() {
       <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-6">
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <Link to="/dashboard" className="hover:text-foreground">
+            <Link to="/" className="hover:text-foreground">
               Dashboard
             </Link>
             <span>&gt;</span>
-            <Link to="/articles" className="hover:text-foreground">
+            <Link to="/viewkalam" className="hover:text-foreground">
               Kalam
             </Link>
             <span>&gt;</span>
@@ -435,7 +460,7 @@ export default function CreateArticlePage() {
                   />
                 </Field>
 
-                <Field label="Post Translate" icon={<FileText className="w-4 h-4" />}>
+                {/* <Field label="Post Translate" icon={<FileText className="w-4 h-4" />}>
                   <textarea
                     value={formatTextWithSpacing(postTranslate)}
                     onChange={handleTextChange(setPostTranslate)}
@@ -445,7 +470,7 @@ export default function CreateArticlePage() {
                     style={{ lineHeight: "2" }}
                     disabled={isSubmitting}
                   />
-                </Field>
+                </Field> */}
               </div>
 
               <div className="space-y-6">

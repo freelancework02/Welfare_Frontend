@@ -9,7 +9,7 @@ import ProtectedRoute from "./component/ProtectedRoute";
 import AboutContent from "./pages/homepage/elements/AboutContent";
 
 // Dashboard & Admin Functional Pages
-import DashboardCard from "./pages/homepage/elements/DashboardCard";
+import DashboardCard from "./pages/homepage/elements/Dashboard";
 import CreateBookPage from "./pages/homepage/elements/CreateBookPage";
 import CreateArticlePage from "./pages/homepage/elements/CreateArticlePage";
 import ContactList from "./pages/ContactList";
@@ -66,38 +66,46 @@ import SectionDetail from "./pages/homepage/elements/SectionDetail";
 import GroupDetail from "./pages/homepage/elements/GroupDetail";
 import TopicDetail from "./pages/homepage/elements/TopicDetail";
 import EditArticlePage from "./pages/homepage/elements/EditArticlePage";
-
+import Editcategory from "./pages/homepage/elements/Editcategory";
+import EditCategory from "./pages/homepage/elements/Editcategory";
+import EditSection from "./pages/homepage/elements/EditSection";
+import EditGroup from "./pages/homepage/elements/Editgroup";
+import Dashboard from "./pages/homepage/elements/Dashboard";
 const App = () => {
   return (
     // <AuthProvider>
     <Router>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<CreateArticlePage />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/addarticle" element={<CreateArticlePage />} />
         <Route path="topic" element={<AddTopic />} />
         <Route path="/section" element={<CreateSection />} />
+        <Route path="/sections/edit/:id" element={<EditSection />} />
         <Route path="/group" element={<CreateGroup />} />
+        <Route path="/groups/edit/:id" element={<EditGroup />} />
         <Route path="/kalam" element={<Createkalam />} />
         <Route path="/viewtopics" element={<ViewTopics />} />
         <Route path="/viewcategory" element={<CategoryDisplay />} />
+        <Route path="/categories/edit/:id" element={<EditCategory />} />
         <Route path="/categories/:id" element={<CategoryDetail />} />
         <Route path="/sections/:id" element={<SectionDetail />} />
         <Route path="/groups/:id" element={<GroupDetail />} />
         <Route path="/topics/:id" element={<TopicDetail />} />
-        <Route path="/viewtopics/edit/:id" element={<EditTopic />} />
+        <Route path="/topics/edit/:id" element={<EditTopic />} />
         <Route path="/viewsection" element={<SectionDisplay />} />
         <Route path="/viewgroup" element={<DisplayGroup />} />
         <Route path="/viewkalam" element={<Viewkalam />} />
         <Route path="/kalaam/:id" element={<KalamDetail />} />
         <Route path="/viewlang" element={<ViewLanguages />} />
         <Route path="/addlang" element={<AddLanguage />} />
-        <Route path="/edit-kalam/:id" element={<Editkalam />} />
+        <Route path="/kalaam/:id/edit" element={<Editkalam />} />
         <Route path="/edit-article/:id" element={<EditArticle />} />
         {/* <Route path="/viewkalam/:id" element={<KalamDetail />} /> */}
         <Route path="/articles/:id/edit" element={<EditArticlePage />} />
         <Route path="/addbook" element={<AddBook />} />
         <Route path="/viewbook" element={<ViewBooks />} />
-        <Route path="/edit-book/:id" element={<EditBook />} />
+        <Route path="/books/edit/:id" element={<EditBook />} />
         <Route path="/newdashboard" element={<NewDashboard />} />
         <Route path="/dashboard" element={<DashboardCard />} />
         <Route path="/book" element={<CreateBookPage />} />
@@ -117,7 +125,7 @@ const App = () => {
         <Route path="/contact" element={<ContactList />} />
         <Route path="/writers" element={<WriterManagement />} />
         <Route path="/writers/:id" element={<ViewWriter />} />
-        <Route path="/writers-update/:id" element={<WriterUpdateForm />} />
+        <Route path="/writers/edit/:id" element={<WriterUpdateForm />} />
         <Route path="/addwriter" element={<CreateWriterForm />} />
 
         <Route path="/booklist" element={<BookList />} />

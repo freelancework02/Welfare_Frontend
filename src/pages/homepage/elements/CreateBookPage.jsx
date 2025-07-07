@@ -235,7 +235,7 @@ export default function AddBook() {
               Dashboard
             </Link>
             <span>&gt;</span>
-            <Link to="/books" className="hover:text-foreground">
+            <Link to="/viewbook" className="hover:text-foreground">
               Books
             </Link>
             <span>&gt;</span>

@@ -9,22 +9,52 @@ export default function ViewBooks() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const fetchBooks = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get("https://updated-naatacademy.onrender.com/api/books");
+      setBooks(response.data);
+    } catch (error) {
+      Swal.fire("Error", "Failed to fetch books", "error");
+      setBooks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBooks = async () => {
-      setLoading(true);
-      try {
-        // Replace with your actual API endpoint
-        const response = await axios.get("https://updated-naatacademy.onrender.com/api/books");
-        setBooks(response.data);
-      } catch (error) {
-        Swal.fire("Error", "Failed to fetch books", "error");
-        setBooks([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchBooks();
   }, []);
+
+  const handleDelete = async (bookId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/books/${bookId}`);
+        await Swal.fire(
+          'Deleted!',
+          'Book has been deleted.',
+          'success'
+        );
+        fetchBooks(); // Refresh the list
+      }
+    } catch (error) {
+      Swal.fire(
+        'Error',
+        'Failed to delete the book.',
+        'error'
+      );
+    }
+  };
 
   return (
     <Layout>
@@ -79,6 +109,20 @@ export default function ViewBooks() {
                           title="View Book"
                         >
                           View
+                        </button>
+                        <button
+                          onClick={() => navigate(`/books/edit/${book.BookID}`)}
+                          className="text-green-600 hover:text-green-900 border border-green-600 px-3 py-1 rounded transition"
+                          title="Edit Book"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(book.BookID)}
+                          className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition"
+                          title="Delete Book"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

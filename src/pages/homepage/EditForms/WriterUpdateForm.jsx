@@ -1,231 +1,446 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { FileText } from "lucide-react";
-import Layout from '../../../component/Layout';
+import React, { useState, useEffect } from "react";
+import { CloudUploadIcon, FileText, Save, ArrowLeft } from "lucide-react";
+import Layout from "../../../component/Layout";
 import Swal from "sweetalert2";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebase/firebaseConfig";
+import Quill from 'quill';
+import axios from "axios";
+import { useParams, useNavigate } from "react-router-dom";
+
+const Font = Quill.import('formats/font');
+Font.whitelist = [
+  'sans-serif', 'serif', 'monospace',
+  'Amiri', 'Rubik-Bold', 'Rubik-Light',
+  'Scheherazade-Regular', 'Scheherazade-Bold',
+  'Aslam', 'Mehr-Nastaliq'
+];
+
+Quill.register(Font, true);
 
 const modules = {
-    toolbar: [
-        [{ 'font': [] }, { 'size': [] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'script': 'sub' }, { 'script': 'super' }],
-        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-        [{ 'align': [] }],
-        ['blockquote', 'code-block'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'indent': '-1' }, { 'indent': '+1' }],
-        ['link', 'image', 'video'],
-        ['clean']
-    ]
+  toolbar: [
+    [
+      {
+        font: [
+          'Amiri',
+          'Rubik-Bold',
+          'Rubik-Light',
+          'Scheherazade-Regular',
+          'Scheherazade-Bold',
+          'Aslam',
+          'Mehr-Nastaliq',
+          'serif',
+          'sans-serif',
+          'monospace'
+        ]
+      },
+      { size: [] }
+    ],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    [{ script: 'sub' }, { script: 'super' }],
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    [{ align: [] }],
+    ['blockquote', 'code-block'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }],
+    ['link', 'image', 'video'],
+    ['clean']
+  ]
 };
 
 const formats = [
-    'font', 'size',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'script',
-    'header', 'align',
-    'blockquote', 'code-block',
-    'list', 'bullet', 'indent',
-    'link', 'image', 'video'
+  'font',
+  'size',
+  'bold', 'italic', 'underline', 'strike',
+  'color', 'background',
+  'script',
+  'header',
+  'align',
+  'blockquote', 'code-block',
+  'list', 'bullet',
+  'indent',
+  'link', 'image', 'video',
+  'clean'
 ];
 
-const WriterUpdateForm = () => {
-    const { id } = useParams();
-    const [formData, setFormData] = useState({
-        writerName: "",
-        designation: "",
-        aboutWriter: ""
-    });
-    const [isLoading, setIsLoading] = useState(false);
-    const navigate = useNavigate();
+export default function EditWriterForm() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  const [formData, setFormData] = useState({
+    Name: "",
+    LanguageID: "",
+    LanguageName: "",
+    Status: "Active",
+    GroupID: "",
+    GroupName: "",
+    SectionID: "",
+    SectionName: "",
+    Bio: "",
+    ProfileImageURL: ""
+  });
 
-    useEffect(() => {
-        const fetchWriter = async () => {
-            setIsLoading(true);
-            try {
-                const docRef = doc(db, "writers", id);
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setFormData({
-                        writerName: data.writerName || "",
-                        designation: data.designation || "",
-                        aboutWriter: data.aboutWriter || ""
-                    });
-                } else {
-                    Swal.fire('Error', 'No such writer found!', 'error');
-                    navigate('/writers');
-                }
-            } catch (err) {
-                console.error("Error fetching writer:", err);
-                Swal.fire('Error', 'Failed to load writer data', 'error');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+  const [profilePic, setProfilePic] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [languages, setLanguages] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-        fetchWriter();
-    }, [id, navigate]);
+  // Fetch writer data and reference data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch writer data and reference data in parallel
+        const [writerRes, groupsRes, sectionsRes] = await Promise.all([
+          axios.get(`https://updated-naatacademy.onrender.com/api/writers/${id}`),
+          axios.get('https://naatacadmey.onrender.com/api/groups'),
+          axios.get('https://naatacadmey.onrender.com/api/sections')
+        ]);
 
-    const handleChange = (e) => {
-        const { id, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [id]: value
-        }));
-    };
+        const writer = writerRes.data;
+        setGroups(groupsRes.data);
+        setSections(sectionsRes.data);
+        
+        // Set default languages
+        setLanguages([
+          { id: 'urdu', name: 'Urdu' },
+          { id: 'english', name: 'English' },
+          { id: 'arabic', name: 'Arabic' }
+        ]);
 
-    const handleDescriptionChange = (value) => {
-        setFormData(prev => ({
-            ...prev,
-            aboutWriter: value
-        }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!formData.writerName.trim()) {
-            Swal.fire('Error', 'Please enter the writer name', 'error');
-            return;
-        }
-
-        Swal.fire({
-            title: 'Updating writer...',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+        // Set form data with writer information
+        setFormData({
+          Name: writer.Name || "",
+          LanguageID: writer.LanguageID || "",
+          LanguageName: writer.LanguageName || "",
+          Status: writer.Status || "Active",
+          GroupID: writer.GroupID || "",
+          GroupName: writer.GroupName || "",
+          SectionID: writer.SectionID || "",
+          SectionName: writer.SectionName || "",
+          Bio: writer.Bio || "",
+          ProfileImageURL: writer.ProfileImageURL || ""
         });
 
-        try {
-            const writerRef = doc(db, "writers", id);
-            const updateData = {
-                ...formData,
-                updatedAt: new Date().toISOString()
-            };
-
-            await updateDoc(writerRef, updateData);
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Writer Updated Successfully!',
-                text: `Updated at: ${new Date().toLocaleString()}`,
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-                navigate('/writers');
-            });
-
-        } catch (error) {
-            console.error("Error updating writer:", error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: error.message || "Something went wrong while updating the writer.",
-            });
+        // Set preview if profile image exists
+        if (writer.ProfileImageURL) {
+          setPreview(writer.ProfileImageURL);
         }
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to fetch writer data',
+        }).then(() => {
+          navigate('/writers');
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    if (isLoading) {
-        return (
-            <Layout>
-                <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-            </Layout>
-        );
+    fetchData();
+  }, [id, navigate]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.match('image.*')) {
+      Swal.fire('Error', 'Please select an image file (JPEG, PNG, etc.)', 'error');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('Error', 'Image size should be less than 5MB', 'error');
+      return;
     }
 
+    setProfilePic(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updatedData = { ...prev, [name]: value };
+      if (name === 'GroupID') {
+        const selected = groups.find(g => String(g.GroupID) === value);
+        updatedData.GroupName = selected ? selected.GroupName : "";
+      }
+      if (name === 'SectionID') {
+        const selected = sections.find(s => String(s.SectionID) === value);
+        updatedData.SectionName = selected ? selected.SectionName : "";
+      }
+      if (name === 'LanguageID') {
+        const selected = languages.find(l => l.id === value);
+        updatedData.LanguageName = selected ? selected.name : "";
+      }
+      return updatedData;
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    if (!formData.Name || !formData.LanguageID) {
+      Swal.fire('Error', 'Please fill in all required fields', 'error');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const formDataToSend = new FormData();
+    Object.keys(formData).forEach(key => {
+      formDataToSend.append(key, formData[key] || "");
+    });
+
+    if (profilePic) {
+      formDataToSend.append("image", profilePic);
+    }
+
+    try {
+      const response = await axios.put(
+        `https://updated-naatacademy.onrender.com/api/writers/${id}`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Writer Updated Successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        }).then(() => {
+          navigate('/writers');
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: error.response?.data?.message || "Failed to update writer",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
     return (
-        <Layout>
-            <button
-                onClick={() => navigate(-1)}
-                className="mb-4 text-blue-600 hover:underline"
-            >
-                ← Back
-            </button>
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold tracking-tight">Update Writer</h1>
-                    <p className="text-gray-500">Edit the writer's information</p>
+      <Layout>
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading writer data...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Back Button */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow flex items-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back
+        </button>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold tracking-tight">Edit Writer</h1>
+          <p className="text-gray-500">Update writer information</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Profile Image Section */}
+              <div className="flex flex-col items-center">
+                <h3 className="text-base font-medium mb-4">Profile Picture</h3>
+                <label
+                  htmlFor="profile-upload"
+                  className="relative border-2 border-dashed border-gray-300 rounded-full w-48 h-48 flex items-center justify-center cursor-pointer overflow-hidden"
+                >
+                  {preview ? (
+                    <img src={preview} alt="Preview" className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="text-center">
+                      <CloudUploadIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-1 text-sm text-gray-500">Upload Photo</p>
+                    </div>
+                  )}
+                  <input
+                    id="profile-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Writer Details Section */}
+              <div className="md:col-span-2 space-y-6">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="Name"
+                      value={formData.Name}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Language <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="LanguageID"
+                      value={formData.LanguageID}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Language</option>
+                      {languages.map(lang => (
+                        <option key={lang.id} value={lang.id}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Group
+                    </label>
+                    <select
+                      name="GroupID"
+                      value={formData.GroupID}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Group</option>
+                      {groups.map(group => (
+                        <option key={group.GroupID} value={group.GroupID}>
+                          {group.GroupName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Section
+                    </label>
+                    <select
+                      name="SectionID"
+                      value={formData.SectionID}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Section</option>
+                      {sections.map(section => (
+                        <option key={section.SectionID} value={section.SectionID}>
+                          {section.SectionName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Status
+                    </label>
+                    <select
+                      name="Status"
+                      value={formData.Status}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="bg-white shadow-md rounded-md overflow-hidden">
-                        <div className="p-6 space-y-6">
-                            <div className="space-y-2">
-                                <label htmlFor="writerName" className="block text-sm font-medium text-gray-700">
-                                    Name <span className="text-red-500 ml-1">*</span>
-                                </label>
-                                <input
-                                    id="writerName"
-                                    value={formData.writerName}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label htmlFor="designation" className="block text-sm font-medium text-gray-700">
-                                    Designation
-                                </label>
-                                <input
-                                    id="designation"
-                                    value={formData.designation}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <FileText className="w-4 h-4" />
-                                    <label className="text-sm font-medium">About Writer</label>
-                                </div>
-                                <ReactQuill
-                                    theme="snow"
-                                    value={formData.aboutWriter}
-                                    onChange={handleDescriptionChange}
-                                    modules={modules}
-                                    formats={formats}
-                                    className="bg-white border rounded-lg min-h-[136px]"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                        <button
-                            type="submit"
-                            className="bg-[#5a6c17] hover:bg-[rgba(90,108,23,0.83)] text-white font-medium px-4 py-2 rounded-lg transition-all text-sm md:text-base flex items-center gap-2"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <>
-                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Updating...
-                                </>
-                            ) : (
-                                "Update Writer"
-                            )}
-                        </button>
-                    </div>
-                </form>
+                {/* Bio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bio
+                  </label>
+                  <ReactQuill
+                    theme="snow"
+                    value={formData.Bio}
+                    onChange={(content) => setFormData(prev => ({ ...prev, Bio: content }))}
+                    modules={modules}
+                    formats={formats}
+                    className="bg-white"
+                    readOnly={isSubmitting}
+                  />
+                </div>
+              </div>
             </div>
-        </Layout>
-    )
-}
+          </div>
 
-export default WriterUpdateForm;
+          {/* Submit Button */}
+          <div className="flex justify-end gap-4">
+            <button
+              type="button"
+              onClick={() => navigate('/writers')}
+              className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`px-6 py-2 text-white rounded-md flex items-center gap-2 ${
+                isSubmitting 
+                  ? 'bg-blue-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              disabled={isSubmitting}
+            >
+              <Save className="w-5 h-5" />
+              {isSubmitting ? 'Updating...' : 'Update Writer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Layout>
+  );
+}

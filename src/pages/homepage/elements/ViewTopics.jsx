@@ -14,20 +14,20 @@ const ViewTopics = () => {
   const itemsPerPage = 10;
   const navigate = useNavigate();
 
+  const fetchTopics = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('https://updated-naatacademy.onrender.com/api/topics');
+      setTopics(response.data);
+    } catch (error) {
+      Swal.fire('Error', 'Failed to fetch topics', 'error');
+      setTopics([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchTopics = async () => {
-      setLoading(true);
-      try {
-        // Replace with your actual API endpoint
-        const response = await axios.get('https://updated-naatacademy.onrender.com/api/topics');
-        setTopics(response.data);
-      } catch (error) {
-        Swal.fire('Error', 'Failed to fetch topics', 'error');
-        setTopics([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTopics();
   }, []);
 
@@ -39,18 +39,33 @@ const ViewTopics = () => {
     setSortConfig({ key, direction });
   };
 
-  const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: 'This topic will be permanently deleted!',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, delete it!',
-    });
-    if (result.isConfirmed) {
-      // TODO: Replace with API call to delete topic
-      setTopics((prev) => prev.filter((topic) => topic.id !== id));
-      Swal.fire('Deleted!', 'Topic has been deleted.', 'success');
+  const handleDelete = async (topicId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/topics/${topicId}`);
+        await Swal.fire(
+          'Deleted!',
+          'Topic has been deleted.',
+          'success'
+        );
+        fetchTopics(); // Refresh the list
+      }
+    } catch (error) {
+      Swal.fire(
+        'Error',
+        'Failed to delete the topic.',
+        'error'
+      );
     }
   };
 
@@ -154,18 +169,18 @@ const ViewTopics = () => {
                         View
                       </button>
                       <button
-                        onClick={() => navigate(`/viewtopics/edit/${topic.id || topic.TopicID}`)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Edit"
+                        onClick={() => navigate(`/topics/edit/${topic.id || topic.TopicID}`)}
+                        className="text-green-600 hover:text-green-900 border border-green-600 px-3 py-1 rounded transition"
+                        title="Edit Topic"
                       >
-                        <Pencil className="w-4 h-4" />
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDelete(topic.id || topic.TopicID)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Delete"
+                        className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition"
+                        title="Delete Topic"
                       >
-                        <Trash className="w-4 h-4" />
+                        Delete
                       </button>
                     </td>
                   </tr>

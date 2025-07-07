@@ -12,22 +12,52 @@ export default function WriterManagement() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const fetchWriters = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get("https://updated-naatacademy.onrender.com/api/writers");
+      setWriters(response.data);
+    } catch (error) {
+      Swal.fire("Error", "Failed to fetch writers", "error");
+      setWriters([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchWriters = async () => {
-      setLoading(true);
-      try {
-        // Replace with your actual API endpoint
-        const response = await axios.get("https://updated-naatacademy.onrender.com/api/writers");
-        setWriters(response.data);
-      } catch (error) {
-        Swal.fire("Error", "Failed to fetch writers", "error");
-        setWriters([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchWriters();
   }, []);
+
+  const handleDelete = async (writerId) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (result.isConfirmed) {
+        await axios.delete(`https://updated-naatacademy.onrender.com/api/writers/${writerId}`);
+        await Swal.fire(
+          'Deleted!',
+          'Writer has been deleted.',
+          'success'
+        );
+        fetchWriters(); // Refresh the list
+      }
+    } catch (error) {
+      Swal.fire(
+        'Error',
+        'Failed to delete the writer.',
+        'error'
+      );
+    }
+  };
 
   const stripHtml = (html) => {
     const tempDiv = document.createElement("div");
@@ -146,6 +176,20 @@ export default function WriterManagement() {
                           title="View Writer"
                         >
                           View
+                        </button>
+                        <button
+                          onClick={() => navigate(`/writers/edit/${writer.WriterID}`)}
+                          className="text-green-600 hover:text-green-900 border border-green-600 px-3 py-1 rounded transition"
+                          title="Edit Writer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(writer.WriterID)}
+                          className="text-red-600 hover:text-red-900 border border-red-600 px-3 py-1 rounded transition"
+                          title="Delete Writer"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
