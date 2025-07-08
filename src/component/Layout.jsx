@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 // import { useAuth } from "./AuthContext";
-import { Menu, X, FileText, BookMarked, PenLine } from 'lucide-react';
+import { Menu, X, FileText, BookMarked, PenLine, LayoutDashboard  } from 'lucide-react';
 
 
 const sidebarLinks = [
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'View Articles', icon: FileText, path: '/viewarticle' },
   { label: 'View Kalam', icon: PenLine, path: '/viewkalam' },
   { label: 'Category', icon: BookMarked, path: '/viewcategory' },

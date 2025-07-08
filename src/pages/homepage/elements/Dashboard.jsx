@@ -13,47 +13,10 @@ import {
   Bookmark,
   Plus,
 } from "lucide-react";
-
-const recentActivity = {
-  poetry: [
-    {
-      title: "Manqabat Imam Ali (AS)",
-      author: "Syed Naseer-uddin-Naseer",
-      date: "11/4/2023",
-      category: "Manqabat",
-    },
-    {
-      title: "Tu Hi Malik e Bahr o Bar Hai",
-      author: "Behzad Lakhnavi",
-      date: "11/3/2023",
-      category: "Hamd",
-    },
-  ],
-  books: [
-    {
-      title: "Kulliyat-e-Iqbal",
-      author: "Allama Iqbal",
-      date: "10/28/2023",
-      category: "Naat",
-    },
-  ],
-  articles: [
-    {
-      title: "The Philosophy of Khudi",
-      author: "Allama Iqbal",
-      date: "10/30/2023",
-      category: "Naat",
-    },
-    {
-      title: "Adab-e-Naat",
-      author: "Ahmed Raza Khan Barelvi",
-      date: "10/29/2023",
-      category: "Naat",
-    },
-  ],
-};
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     articles: 0,
     writers: 0,
@@ -63,6 +26,12 @@ const Dashboard = () => {
     categories: 0,
     groups: 0,
     topics: 0
+  });
+
+  const [recentActivity, setRecentActivity] = useState({
+    poetry: [],
+    books: [],
+    articles: []
   });
 
   useEffect(() => {
@@ -77,7 +46,27 @@ const Dashboard = () => {
       }
     };
 
+    const fetchRecentActivity = async () => {
+      try {
+        // Fetch latest article
+        const articlesRes = await axios.get("https://updated-naatacademy.onrender.com/api/articles");
+        // Fetch latest book
+        const booksRes = await axios.get("https://updated-naatacademy.onrender.com/api/books");
+        // Fetch latest kalaam
+        const kalaamRes = await axios.get("https://updated-naatacademy.onrender.com/api/kalaam");
+
+        setRecentActivity({
+          poetry: kalaamRes.data.data || [],
+          books: booksRes.data.data || [],
+          articles: articlesRes.data.data || []
+        });
+      } catch (error) {
+        console.error("Error fetching recent activity:", error);
+      }
+    };
+
     fetchStats();
+    fetchRecentActivity();
   }, []);
 
   const statsData = [
@@ -87,6 +76,7 @@ const Dashboard = () => {
       icon: FileText,
       color: "bg-cyan-500",
       hoverColor: "hover:bg-cyan-600",
+      route: "/addarticle"
     },
     {
       title: "Writers",
@@ -94,6 +84,7 @@ const Dashboard = () => {
       icon: Users,
       color: "bg-blue-500",
       hoverColor: "hover:bg-blue-600",
+      route: "/addwriter"
     },
     {
       title: "Poetry",
@@ -101,6 +92,7 @@ const Dashboard = () => {
       icon: List,
       color: "bg-green-500",
       hoverColor: "hover:bg-green-600",
+      route: "/kalam"
     },
     {
       title: "Books",
@@ -108,6 +100,7 @@ const Dashboard = () => {
       icon: Book,
       color: "bg-purple-500",
       hoverColor: "hover:bg-purple-600",
+      route: "/addbook"
     },
     {
       title: "Sections",
@@ -115,6 +108,7 @@ const Dashboard = () => {
       icon: LayoutIcon,
       color: "bg-red-500",
       hoverColor: "hover:bg-red-600",
+      route: "/section"
     },
     {
       title: "Categories",
@@ -122,6 +116,7 @@ const Dashboard = () => {
       icon: Folder,
       color: "bg-orange-500",
       hoverColor: "hover:bg-orange-600",
+      route: "/category"
     },
     {
       title: "Groups",
@@ -129,6 +124,7 @@ const Dashboard = () => {
       icon: Users2,
       color: "bg-teal-500",
       hoverColor: "hover:bg-teal-600",
+      route: "/group"
     },
     {
       title: "Topics",
@@ -136,6 +132,7 @@ const Dashboard = () => {
       icon: Hash,
       color: "bg-pink-500",
       hoverColor: "hover:bg-pink-600",
+      route: "/topic"
     },
   ];
 
@@ -165,6 +162,7 @@ const Dashboard = () => {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-4">{stat.title}</h3>
                   <button
+                    onClick={() => navigate(stat.route)}
                     className={`flex items-center justify-center w-full py-2 px-4 text-sm font-medium text-white rounded-md ${stat.color} ${stat.hoverColor} transition`}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -183,19 +181,32 @@ const Dashboard = () => {
               <div className="bg-white shadow-md rounded-xl">
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                   <h3 className="text-lg font-semibold">Latest Poetry</h3>
-                  <button className="text-blue-600 text-sm font-medium">View All →</button>
+                  <button 
+                    onClick={() => navigate('/kalam')}
+                    className="text-blue-600 text-sm font-medium"
+                  >
+                    View All →
+                  </button>
                 </div>
                 <div className="p-6 space-y-4">
-                  {recentActivity.poetry.map((item, i) => (
-                    <div key={i} className="border-b pb-4 last:border-b-0">
-                      <h4 className="text-gray-900 font-medium mb-1">{item.title}</h4>
-                      <p className="text-sm text-gray-600 mb-1">by {item.author}</p>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{item.category}</span>
-                        <span className="text-gray-500">{item.date}</span>
+                  {recentActivity.poetry.length > 0 ? (
+                    recentActivity.poetry.map((item, i) => (
+                      <div key={i} className="border-b pb-4 last:border-b-0">
+                        <h4 className="text-gray-900 font-medium mb-1">{item.Title || item.name}</h4>
+                        <p className="text-sm text-gray-600 mb-1">by {item.WriterName || item.writer?.name || 'Unknown'}</p>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                            {item.CategoryName || 'Poetry'}
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(item.CreatedOn || item.date).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No recent poetry found</p>
+                  )}
                 </div>
               </div>
 
@@ -203,19 +214,32 @@ const Dashboard = () => {
               <div className="bg-white shadow-md rounded-xl">
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                   <h3 className="text-lg font-semibold">Latest Books</h3>
-                  <button className="text-blue-600 text-sm font-medium">View All →</button>
+                  <button 
+                    onClick={() => navigate('/addbook')}
+                    className="text-blue-600 text-sm font-medium"
+                  >
+                    View All →
+                  </button>
                 </div>
                 <div className="p-6 space-y-4">
-                  {recentActivity.books.map((item, i) => (
-                    <div key={i} className="border-b pb-4 last:border-b-0">
-                      <h4 className="text-gray-900 font-medium mb-1">{item.title}</h4>
-                      <p className="text-sm text-gray-600 mb-1">by {item.author}</p>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{item.category}</span>
-                        <span className="text-gray-500">{item.date}</span>
+                  {recentActivity.books.length > 0 ? (
+                    recentActivity.books.map((item, i) => (
+                      <div key={i} className="border-b pb-4 last:border-b-0">
+                        <h4 className="text-gray-900 font-medium mb-1">{item.title || item.name}</h4>
+                        <p className="text-sm text-gray-600 mb-1">by {item.author || item.writer?.name || 'Unknown'}</p>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                            {item.category?.name || 'Book'}
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(item.createdAt || item.date).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No recent books found</p>
+                  )}
                 </div>
               </div>
 
@@ -223,19 +247,32 @@ const Dashboard = () => {
               <div className="bg-white shadow-md rounded-xl">
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                   <h3 className="text-lg font-semibold">Latest Articles</h3>
-                  <button className="text-blue-600 text-sm font-medium">View All →</button>
+                  <button 
+                    onClick={() => navigate('/addarticle')}
+                    className="text-blue-600 text-sm font-medium"
+                  >
+                    View All →
+                  </button>
                 </div>
                 <div className="p-6 space-y-4">
-                  {recentActivity.articles.map((item, i) => (
-                    <div key={i} className="border-b pb-4 last:border-b-0">
-                      <h4 className="text-gray-900 font-medium mb-1">{item.title}</h4>
-                      <p className="text-sm text-gray-600 mb-1">by {item.author}</p>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{item.category}</span>
-                        <span className="text-gray-500">{item.date}</span>
+                  {recentActivity.articles.length > 0 ? (
+                    recentActivity.articles.map((item, i) => (
+                      <div key={i} className="border-b pb-4 last:border-b-0">
+                        <h4 className="text-gray-900 font-medium mb-1">{item.title || item.name}</h4>
+                        <p className="text-sm text-gray-600 mb-1">by {item.author || item.writer?.name || 'Unknown'}</p>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                            {item.category?.name || 'Article'}
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(item.createdAt || item.date).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No recent articles found</p>
+                  )}
                 </div>
               </div>
             </div>
