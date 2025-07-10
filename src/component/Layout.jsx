@@ -1,20 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-// import { useAuth } from "./AuthContext";
-import { Menu, X, FileText, BookMarked, PenLine, LayoutDashboard  } from 'lucide-react';
-
+import {
+  Menu,
+  X,
+  FileText,
+  LayoutDashboard
+} from 'lucide-react';
 
 const sidebarLinks = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { label: 'View Articles', icon: FileText, path: '/viewarticle' },
-  { label: 'View Kalam', icon: PenLine, path: '/viewkalam' },
-  { label: 'Category', icon: BookMarked, path: '/viewcategory' },
-  { label: 'View Book', icon: BookMarked, path: '/viewbook' },
-  { label: 'Writers', icon: BookMarked, path: '/writers' },
-  { label: 'Section', icon: BookMarked, path: '/viewsection' },
-  { label: 'Group', icon: BookMarked, path: '/viewgroup' },
-  { label: 'View Topics', icon: BookMarked, path: '/viewtopics' },
-  { label: 'Languages', icon: BookMarked, path: '/viewlang' },
+  { label: 'Contact Us', icon: LayoutDashboard, path: '/' },
+  { label: 'Create Blog', icon: FileText, path: '/blog' },
+  { label: 'View Blog', icon: FileText, path: '/viewblog' },
 ];
 
 const Layout = ({ children }) => {
@@ -22,9 +18,6 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  // const { logout, loading, user } = useAuth();
-
-  // if (loading) return <div className="p-6 text-center">Loading...</div>;
 
   const getCurrentPageTitle = () => {
     const currentLink = sidebarLinks.find(link => link.path === location.pathname);
@@ -32,26 +25,33 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen w-screen text-gray-900 overflow-hidden">
+    <div className="flex h-screen w-screen text-gray-900 overflow-hidden bg-gray-100">
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:relative md:flex md:h-full overflow-y-auto h-screen`}>
-        <div className="p-6 border-b flex justify-center items-center relative">
-          <h2 className="text-xl font-bold">Admin Dashboard</h2>
-          <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 md:hidden">
-            <X className="w-5 h-5 text-black" />
+      <aside
+        className={`fixed z-40 top-0 left-0 w-64 h-screen bg-white shadow-lg transition-transform duration-300 ease-in-out transform
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
+          md:translate-x-0 md:relative md:shadow-none`}
+      >
+        <div className="p-5 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-indigo-700">📊 Admin Panel</h2>
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden">
+            <X className="w-5 h-5 text-gray-700" />
           </button>
         </div>
 
-        <nav className="flex flex-col mt-2">
+        <nav className="mt-4 flex flex-col">
           {sidebarLinks.map(({ label, icon: Icon, path }, idx) => (
             <button
               key={idx}
-              onClick={() => navigate(path)}
+              onClick={() => {
+                navigate(path);
+                setSidebarOpen(false);
+              }}
               className={`flex items-center gap-3 px-6 py-3 text-lg transition-all w-full text-left
-                ${location.pathname === path
-                  ? "bg-[#fefee6] border-r-2 border-[#5c5a00] text-[#5c5a00] font-semibold"
-                  : "text-gray-700 hover:bg-gray-100"
+                ${
+                  location.pathname === path
+                    ? "bg-indigo-100 text-indigo-700 font-semibold border-r-4 border-indigo-600"
+                    : "text-gray-700 hover:bg-gray-100"
                 }
               `}
             >
@@ -62,32 +62,36 @@ const Layout = ({ children }) => {
         </nav>
       </aside>
 
-      {/* Main Section */}
+      {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="flex items-center justify-between bg-white border-b px-6 py-4 shadow-sm">
-          <div className="flex items-center space-x-3">
+        {/* Header */}
+        <header className="flex items-center justify-between bg-white shadow-sm px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden">
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
-            <h3 className="text-xl font-semibold text-gray-700">{getCurrentPageTitle()}</h3>
+            <h3 className="text-xl font-semibold text-gray-800">{getCurrentPageTitle()}</h3>
           </div>
-          
+
+          {/* Profile Dropdown */}
           <div className="relative">
             <button
-              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-full transition-all"
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             >
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-              O
+              <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-medium">
+                O
               </div>
-              <span className="text-sm font-medium">Owais Rizvi</span>
+              <span className="hidden md:inline text-sm font-medium">Owais Rizvi</span>
             </button>
 
             {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                 <button
+                  onClick={() => {
+                    // logout(); if implemented
+                  }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                  
                 >
                   Logout
                 </button>
@@ -96,7 +100,7 @@ const Layout = ({ children }) => {
           </div>
         </header>
 
-        {/* Content */}
+        {/* Page Content */}
         <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
           {children}
         </main>

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useRef, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -11,25 +12,12 @@ import {
   Layers,
   Grid,
 } from "lucide-react";
-// import Layout from "../../../component/Layout";
 import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Quill from "quill";
 import Swal from "sweetalert2";
-import Layout from '../../../component/Layout'
-
-// import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db } from "../../firebase/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  doc,
-  setDoc,
-  serverTimestamp
-} from "firebase/firestore";
-
+import Layout from '../../../component/Layout';
 
 // Font registration for Quill
 const Font = Quill.import("formats/font");
@@ -104,7 +92,7 @@ function Field({ label, icon, children, required }) {
   );
 }
 
-export default function CreateArticlePage() {
+const CreateArticlePage = () => {
   const [title, setTitle] = useState("");
   const [writerId, setWriterId] = useState("");
   const [writerName, setWriterName] = useState("");
@@ -130,22 +118,70 @@ export default function CreateArticlePage() {
 
   useEffect(() => {
     // Fetch writers
-    axios.get("https://naatacadmey.onrender.com/api/writers").then(res => setWriters(res.data)).catch(() => setWriters([]));
+    axios.get("https://updated-naatacademy.onrender.com/api/writers")
+      .then(res => setWriters(res.data))
+      .catch(err => {
+        console.error("Error fetching writers:", err);
+        setWriters([]);
+      });
+
     // Fetch categories
-    axios.get("https://naatacadmey.onrender.com/api/categories").then(res => setCategories(res.data)).catch(() => setCategories([]));
+    axios.get("https://updated-naatacademy.onrender.com/api/categories")
+      .then(res => setCategories(res.data))
+      .catch(err => {
+        console.error("Error fetching categories:", err);
+        setCategories([]);
+      });
+
     // Fetch groups
-    axios.get("https://naatacadmey.onrender.com/api/groups").then(res => setGroups(res.data)).catch(() => setGroups([]));
+    axios.get("https://updated-naatacademy.onrender.com/api/groups")
+      .then(res => setGroups(res.data))
+      .catch(err => {
+        console.error("Error fetching groups:", err);
+        setGroups([]);
+      });
+
     // Fetch sections
-    axios.get("https://naatacadmey.onrender.com/api/sections").then(res => setSections(res.data)).catch(() => setSections([]));
+    axios.get("https://updated-naatacademy.onrender.com/api/sections")
+      .then(res => setSections(res.data))
+      .catch(err => {
+        console.error("Error fetching sections:", err);
+        setSections([]);
+      });
+
     // Fetch topics
-    axios.get("https://naatacadmey.onrender.com/api/topics").then(res => setTopics(res.data)).catch(() => setTopics([]));
+    axios.get("https://updated-naatacademy.onrender.com/api/topics")
+      .then(res => setTopics(res.data))
+      .catch(err => {
+        console.error("Error fetching topics:", err);
+        setTopics([]);
+      });
   }, []);
 
-
-
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid File Type",
+        text: "Please upload only image files (JPEG, JPG, PNG, GIF)",
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        icon: "error",
+        title: "File Too Large",
+        text: "Please upload an image smaller than 5MB",
+      });
+      return;
+    }
 
     setImageFile(file);
     const previewURL = URL.createObjectURL(file);
@@ -153,64 +189,34 @@ export default function CreateArticlePage() {
   };
 
   const handleSave = async () => {
+    setIsSubmitting(true);
+    const requiredFields = { Title: title.trim(), WriterID: writerId, CategoryID: categoryId };
+    const missingFields = Object.entries(requiredFields).filter(([_, v]) => !v).map(([k]) => k);
+    if (missingFields.length > 0) {
+      Swal.fire({ icon: "warning", title: "Missing Fields", text: `Missing: ${missingFields.join(', ')}` });
+      return setIsSubmitting(false);
+    }
+
+    let finalThumbnailURL = null;
+    if (imageFile) {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      try {
+        const res = await axios.post('https://updated-naatacademy.onrender.com/api/upload', formData);
+        finalThumbnailURL = res.data.imageUrl;
+      } catch {
+        Swal.fire({ icon: "error", title: "Upload Failed", text: "Try again." });
+        return setIsSubmitting(false);
+      }
+    }
+
     try {
-      setIsSubmitting(true);
-      let finalThumbnailURL = null;
-
-      // If there's an image to upload
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-
-        try {
-          const uploadResponse = await axios.post('https://updated-naatacademy.onrender.com/api/upload', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-
-          finalThumbnailURL = uploadResponse.data.imageUrl;
-        } catch (uploadError) {
-          console.error('Error uploading image:', uploadError);
-          Swal.fire({
-            icon: "error",
-            title: "Image Upload Failed",
-            text: "Failed to upload image. Please try again.",
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // Validate required fields
-      const requiredFields = {
-        Title: title.trim(),
-        WriterID: writerId,
-        CategoryID: categoryId
-      };
-
-      const missingFields = Object.entries(requiredFields)
-        .filter(([_, value]) => !value)
-        .map(([key]) => key);
-
-      if (missingFields.length > 0) {
-        Swal.fire({
-          icon: "warning",
-          title: "Missing Required Fields",
-          text: `Please fill in the following required fields: ${missingFields.join(', ')}`,
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Prepare article data
-      const articleData = {
+      const articleRes = await axios.post('https://updated-naatacademy.onrender.com/api/articles', {
         Title: title,
         WriterID: parseInt(writerId),
         WriterName: writerName,
         CategoryID: parseInt(categoryId),
         CategoryName: categoryName,
-        ThumbnailURL: finalThumbnailURL,
         ContentUrdu: contentUrdu,
         ContentEnglish: contentEnglish,
         GroupID: groupId ? parseInt(groupId) : null,
@@ -218,76 +224,26 @@ export default function CreateArticlePage() {
         SectionID: sectionId ? parseInt(sectionId) : null,
         SectionName: sectionName,
         Topic: topicName,
-        TopicName: topicName, // Added to match backend schema
-        IsDeleted: 0 // Added to match backend schema
-      };
-
-      console.log('Sending article data:', articleData);
-
-      // Create article
-      const response = await axios.post('https://updated-naatacademy.onrender.com/api/articles', articleData);
-
-      if (response.data.success) {
-        Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: "Article created successfully!",
-          timer: 2000
-        });
-
-        // Reset form
-        setTitle("");
-        setWriterId("");
-        setWriterName("");
-        setCategoryId("");
-        setCategoryName("");
-        setThumbnailURL("");
-        setImageFile(null);
-        setContentUrdu("");
-        setContentEnglish("");
-        setGroupId("");
-        setGroupName("");
-        setSectionId("");
-        setSectionName("");
-        setTopicName("");
-        
-        setTimeout(() => {
-          setIsSubmitting(false);
-          navigate("/viewarticle");
-        }, 2000);
-      } else {
-        throw new Error(response.data.message || 'Failed to create article');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      let errorMessage = 'Something went wrong while creating the article.';
-
-      if (error.response?.data) {
-        console.error('Server error details:', error.response.data);
-        
-        // Handle missing fields error
-        if (error.response.data.missingFields) {
-          errorMessage = `Missing required fields: ${error.response.data.missingFields.join(', ')}`;
-        } else {
-          errorMessage = error.response.data.message || error.response.data.error || errorMessage;
-        }
-
-        // Handle SQL errors
-        if (error.response.data.sqlError) {
-          console.error('SQL Error:', error.response.data.sqlError);
-          if (error.response.data.sqlError.includes("doesn't exist")) {
-            errorMessage = "Database configuration error. Please contact support.";
-          }
-        }
-      }
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
+        TopicName: topicName,
+        IsDeleted: 0,
+        ThumbnailURL: finalThumbnailURL // initially temp
       });
-      setIsSubmitting(false);
+
+      const articleId = articleRes.data.article.ArticleID;
+      const fullUrl = `https://updated-naatacademy.onrender.com/api/uploads/${articleId}`;
+
+      await axios.put(`https://updated-naatacademy.onrender.com/api/articles/${articleId}`, {
+        ...articleRes.data.article,
+        ThumbnailURL: fullUrl
+      });
+
+      Swal.fire({ icon: "success", title: "Success", text: "Article created!", timer: 2000 });
+      setTimeout(() => navigate("/viewarticle"), 2000);
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.message || 'Creation failed' });
     }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -538,4 +494,6 @@ export default function CreateArticlePage() {
       </div>
     </Layout>
   );
-}
+};
+
+export default CreateArticlePage;
