@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import ReactQuill from "react-quill";
 import { useNavigate } from "react-router-dom";
 import "react-quill/dist/quill.snow.css";
@@ -6,7 +6,6 @@ import Quill from "quill";
 import Swal from "sweetalert2";
 import Layout from "../../../component/Layout";
 
-// Step 1: Font whitelist
 const Font = Quill.import("formats/font");
 Font.whitelist = [
   "sans-serif",
@@ -20,7 +19,6 @@ Font.whitelist = [
 ];
 Quill.register(Font, true);
 
-// Step 2: React Quill toolbar config
 const modules = {
   toolbar: [
     [{ font: Font.whitelist }],
@@ -54,26 +52,47 @@ const formats = [
 
 const CreateBlog = () => {
   const [title, setTitle] = useState("");
+  const [topic, setTopic] = useState("");
+  const [writername, setWriterName] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!title.trim() || !description.trim()) {
+    if (!title.trim() || !topic.trim() || !writername.trim() || !description.trim()) {
       return Swal.fire({
         icon: "warning",
         title: "Missing Fields",
-        text: "Please fill in both title and description.",
+        text: "Please fill in title, topic, writer name and description.",
+      });
+    }
+    if (!image) {
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing Image",
+        text: "Please select a blog image.",
       });
     }
 
     setIsSubmitting(true);
-
     try {
-      const response = await fetch("https://welfare-a0jo.onrender.com/api/blogs", {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("topic", topic);
+      formData.append("writername", writername);
+      formData.append("description", description);
+      formData.append("image", image);
+
+      const response = await fetch("http://localhost:5000/api/blogs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description }),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Failed to create blog");
@@ -95,7 +114,6 @@ const CreateBlog = () => {
     <Layout>
       <div className="max-w-4xl mx-auto py-10 px-4">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">✍️ Create Blog</h1>
-
         <div className="bg-white rounded-xl shadow p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">
@@ -110,7 +128,32 @@ const CreateBlog = () => {
               disabled={isSubmitting}
             />
           </div>
-
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Topic <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Enter blog topic"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Writer Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Enter writer's name"
+              value={writername}
+              onChange={(e) => setWriterName(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">
               Description <span className="text-red-500">*</span>
@@ -124,7 +167,23 @@ const CreateBlog = () => {
               readOnly={isSubmitting}
             />
           </div>
-
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Blog Image <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={isSubmitting}
+              className="block w-full"
+            />
+            {image && (
+              <div className="mt-2 text-sm text-gray-500">
+                Selected: {image.name}
+              </div>
+            )}
+          </div>
           <div className="flex justify-end">
             <button
               onClick={handleSubmit}
