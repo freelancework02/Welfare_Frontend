@@ -216,7 +216,7 @@
         <section class="py-14 lg:py-20">
             <div class="container mx-auto px-6">
                 <h2 class="text-3xl font-bold text-center text-[var(--navy-blue)] mb-12">Read More From QEWS</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div id="related-blogs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     
                     <!-- Related Article Card 1 -->
                     <div class="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-2 transition-all duration-300">
@@ -292,6 +292,139 @@
     </button>
 
     <script>
+
+
+
+      
+
+  document.addEventListener("DOMContentLoaded", async () => {
+  const params = new URLSearchParams(window.location.search);
+  const blogId = params.get("id");
+
+  if (!blogId) {
+    console.error("No blog ID found in URL");
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/blogs/${blogId}`);
+    const blog = await res.json(); // ✅ single object
+
+    if (!blog || blog.error) {
+      document.querySelector("article").innerHTML = "<p class='text-center text-red-500'>Blog not found.</p>";
+      return;
+    }
+
+    const article = document.querySelector("article .max-w-4xl");
+
+    article.innerHTML = `
+      <!-- Article Header -->
+      <header class="text-center mb-12">
+          <div class="mb-4">
+              <a href="#" class="inline-block bg-indigo-100 text-[var(--indigo-blue)] text-sm font-semibold px-4 py-1 rounded-full">${blog.topic || "General"}</a>
+          </div>
+          <h1 class="text-4xl md:text-5xl font-extrabold text-[var(--navy-blue)] leading-tight mb-4">${blog.title}</h1>
+          <div class="flex items-center justify-center text-base text-[var(--text-muted)]">
+              <img src="https://i.pravatar.cc/40?u=${blog.writername}" alt="Author" class="w-12 h-12 rounded-full mr-4">
+              <div>
+                  <p class="font-semibold text-gray-800">By ${blog.writername || "Unknown"}</p>
+                  <p>Published on ${new Date(blog.created_at).toDateString()}</p>
+              </div>
+          </div>
+      </header>
+
+      <!-- Featured Image -->
+      <div class="mb-12">
+          <img src="http://localhost:5000/api/blogs/${blog.id}/image" 
+               alt="${blog.title}" 
+               class="w-full h-auto object-cover rounded-2xl shadow-xl">
+      </div>
+
+      <!-- Article Body -->
+      <div class="article-content text-lg text-[var(--text-dark)]">
+          <p>${blog.description.replace(/\n/g, "<br>")}</p>
+      </div>
+
+      <!-- Social Share -->
+      <div class="mt-12 pt-8 border-t border-gray-200 text-center">
+          <h4 class="text-xl font-bold text-[var(--navy-blue)] mb-4">Share this Inspiring Story</h4>
+          <div class="flex justify-center items-center gap-4">
+              <a href="#" class="text-3xl text-gray-500 hover:text-[#1877F2] transition-colors"><i class="bi bi-facebook"></i></a>
+              <a href="#" class="text-3xl text-gray-500 hover:text-[#1DA1F2] transition-colors"><i class="bi bi-twitter"></i></a>
+              <a href="#" class="text-3xl text-gray-500 hover:text-[#25D366] transition-colors"><i class="bi bi-whatsapp"></i></a>
+              <a href="#" class="text-3xl text-gray-500 hover:text-[#0A66C2] transition-colors"><i class="bi bi-linkedin"></i></a>
+          </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error("Error fetching blog:", error);
+  }
+});
+
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const relatedContainer = document.getElementById("related-blogs");
+
+  // get current blog id from query string so we don't include it in related
+  const params = new URLSearchParams(window.location.search);
+  const currentBlogId = params.get("id");
+
+  async function fetchRelatedBlogs() {
+    try {
+      const res = await fetch("http://localhost:5000/api/blogs?limit=4");
+      if (!res.ok) throw new Error("Failed to fetch related blogs");
+      const blogs = await res.json();
+
+      if (!blogs.length) {
+        relatedContainer.innerHTML = '<p class="text-center col-span-full text-gray-500">No related blogs found.</p>';
+        return;
+      }
+
+      relatedContainer.innerHTML = "";
+
+      blogs
+        .filter(b => b.id != currentBlogId) // exclude current blog
+        .slice(0, 3) // just 3 related
+        .forEach(blog => {
+          const card = document.createElement("div");
+          card.className =
+            "bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transform hover:-translate-y-2 transition-all duration-300";
+
+          card.innerHTML = `
+            <a href="blogview.html?id=${blog.id}" class="block">
+              <img src="http://localhost:5000/api/blogs/${blog.id}/image" alt="${escapeHtml(blog.title)}" class="w-full h-56 object-cover">
+            </a>
+            <div class="p-6 flex flex-col flex-grow">
+              <h3 class="text-lg font-bold text-[var(--navy-blue)] mb-3 leading-tight flex-grow">
+                <a href="blogview.html?id=${blog.id}" class="hover:text-[var(--indigo-blue)]">${escapeHtml(blog.title)}</a>
+              </h3>
+              <div class="mt-auto pt-4 border-t border-gray-200 flex items-center text-sm text-[var(--text-muted)]">
+                <span class="font-semibold text-gray-800">${escapeHtml(blog.writername || "QEWS Team")}</span>
+                <span class="mx-1">•</span>
+                <span>${new Date(blog.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+              </div>
+            </div>
+          `;
+          relatedContainer.appendChild(card);
+        });
+    } catch (error) {
+      console.error(error);
+      relatedContainer.innerHTML = '<p class="text-center col-span-full text-red-500">Error loading related blogs.</p>';
+    }
+  }
+
+  // escape html function
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  fetchRelatedBlogs();
+});
+
+
+
     document.addEventListener('DOMContentLoaded', function () {
         // --- Mobile Menu Toggle ---
         const mobileMenuButton = document.getElementById('mobile-menu-button');
