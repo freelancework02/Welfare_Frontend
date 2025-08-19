@@ -59,11 +59,11 @@ const CreateBlog = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setImage(e.target.files);
-    }
-  };
+ const handleImageChange = (e) => {
+  if (e.target.files && e.target.files) {
+    setImage(e.target.files[0]);
+  }
+};
 
   const handleSubmit = async () => {
     if (!title.trim() || !topic.trim() || !writername.trim() || !description.trim()) {
