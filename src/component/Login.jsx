@@ -1,128 +1,126 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
 import { useAuth } from './AuthContext';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '../pages/firebase/firebaseConfig'; // ✅ named modular imports
+import { useNavigate, Link } from 'react-router-dom';
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  });
-  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const { login, backendStatus } = useAuth();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (backendStatus === 'offline') {
+      setError('Backend server is offline. Please start the server on port 5000.');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
 
     try {
-      await login(formData.username, formData.password);
-      const user = auth.currentUser;
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-      if (user) {
-        const userRef = doc(db, 'admins', user.uid);
-        const userSnap = await getDoc(userRef);
+      // Handle network errors
+      if (!response.ok && response.status === 0) {
+        throw new Error('Cannot connect to server. Please make sure the backend is running on port 5000.');
+      }
 
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          const userRole = userData.role;
+      const data = await response.json();
 
-          Swal.fire({
-            icon: 'success',
-            title: 'Login successful!',
-            showConfirmButton: false,
-            timer: 2000
-          });
-
-          switch (userRole) {
-            case 'superadmin':
-              navigate('/dashboard');
-              break;
-            case 'admin':
-              navigate('/dashboard');
-              break;
-            default:
-              navigate('/dashboard');
-          }
-        } else {
-          throw new Error('No user data found');
-        }
+      if (response.ok) {
+        login(data.user, data.token);
+        navigate('/');
       } else {
-        throw new Error('User not authenticated');
+        setError(data.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Error logging in:', error);
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Error logging in',
-        text: error.message,
-        showConfirmButton: false,
-        timer: 2000
-      });
+      if (error.message.includes('Failed to fetch')) {
+        setError('Cannot connect to server. Please make sure the backend is running on port 5000.');
+      } else {
+        setError(error.message || 'Network error. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm"
-        onSubmit={handleSubmit}
-      >
-        <div className="flex justify-center mb-4">
-          <img
-            src="https://static.wixstatic.com/media/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png/v1/fill/w_75,h_75,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/562b73_6721f8c4e1584270a7ed8b4d316ef75e~mv2.png"
-            alt="Logo"
-            className="h-16 w-auto"
-          />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+          {backendStatus === 'offline' && (
+            <div className="mt-2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+              Backend server is offline. Please run: <code>node server.js</code> in your backend directory.
+            </div>
+          )}
         </div>
-        <h2 className="text-2xl font-bold mb-2 text-center">Welcome, User!</h2>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
 
-        <p className="text-gray-600 mb-6 text-center">Please log in</p>
-        <input
-          type="text"
-          name="username"
-          placeholder="User Name"
-          value={formData.username}
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <div className="relative">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 pr-10 mb-6 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <span
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute top-1/4 right-3 -translate-y-1/2 text-gray-500 cursor-pointer"
-          >
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
-        </div>
-
-        <input
-          type="submit"
-          value="Log In"
-          className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition duration-200"
-        />
-      </form>
+          <div>
+            <button
+              type="submit"
+              disabled={loading || backendStatus === 'offline'}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+          
+          <div className="text-center">
+            <Link 
+              to="/register" 
+              className="text-indigo-600 hover:text-indigo-500 text-sm"
+            >
+              Don't have an account? Sign up
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

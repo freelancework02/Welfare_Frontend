@@ -1,20 +1,17 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+// src/component/ProtectedRoute.jsx
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "./AuthContext";
 
-const ProtectedRoute =  ({ element, allowedRoles }) => {
-   const { currentUser, userRole } = useAuth(); // Example usage of authentication context
+const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
 
-  // Example logic to check if user is authenticated and has required role
-  const isAuthenticated = currentUser !== null;
-  const hasRequiredRole = allowedRoles.includes(userRole);
+  if (!user) {
+    // if no user, redirect to login
+    return <Navigate to="/login" replace />;
+  }
 
-  return isAuthenticated && hasRequiredRole ? (
-    element
-  ) : (
-    <Navigate to="/" replace />
-  );
-
+  return children;
 };
 
 export default ProtectedRoute;
-

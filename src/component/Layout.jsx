@@ -24,6 +24,9 @@ const Layout = ({ children }) => {
     return currentLink ? currentLink.label : "Dashboard";
   };
 
+  const storedRole = localStorage.getItem("role");
+
+
   return (
     <div className="flex h-screen w-screen text-gray-900 overflow-hidden bg-gray-100">
       {/* Sidebar */}
@@ -80,16 +83,17 @@ const Layout = ({ children }) => {
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             >
               <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-medium">
-                O
+                
               </div>
-              <span className="hidden md:inline text-sm font-medium">Owais Rizvi</span>
+              <span className="hidden md:inline text-sm font-medium"> {storedRole ? storedRole : "User"}</span>
             </button>
 
             {profileDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
                 <button
-                  onClick={() => {
-                    // logout(); if implemented
+                 onClick={() => {
+                    localStorage.removeItem("role"); // clear storage on logout
+                    navigate("/login");
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                 >

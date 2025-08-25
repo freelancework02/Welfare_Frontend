@@ -1,63 +1,95 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, db } from '../pages/firebase/firebaseConfig'; // ✅ modular imports
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [fname, setFname] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'online', 'offline'
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const userRef = doc(db, 'admins', user.uid);
-          const userSnap = await getDoc(userRef);
-
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            setUserRole(data.role || null);
-            setFname(data.fname || null);
-          } else {
-            setUserRole(null);
-            setFname(null);
-          }
-          setCurrentUser(user);
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
-      } else {
-        setCurrentUser(null);
-        setUserRole(null);
-        setFname(null);
-      }
+    if (token && !user) {
+      fetchUserProfile(); // Only fetch if token exists but no user in state
+    } else {
       setLoading(false);
-    });
+      setBackendStatus('online');
+    }
+  }, [token]);
 
-    return () => unsubscribe();
-  }, []);
-
-  const login = async (email, password) => {
-    await signInWithEmailAndPassword(auth, email, password);
+  const checkBackendStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/health');
+      return response.ok;
+    } catch {
+      return false;
+    }
   };
 
-  const logout = async () => {
-    await signOut(auth);
-    setCurrentUser(null);
-    setUserRole(null);
-    setFname(null);
+  const fetchUserProfile = async () => {
+    try {
+      setBackendStatus('checking');
+      const isBackendOnline = await checkBackendStatus();
+
+      if (!isBackendOnline) {
+        setBackendStatus('offline');
+        setLoading(false);
+        return;
+      }
+
+      setBackendStatus('online');
+
+      const response = await fetch('http://localhost:5000/api/auth/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      } else if (response.status === 401) {
+        logout(); // Token expired
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setBackendStatus('offline');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const value = { currentUser, userRole, fname, login, logout, loading };
+  const login = (userData, authToken) => {
+    localStorage.setItem('token', authToken);
+    setToken(authToken);
+    setUser(userData); // Directly set user → no need to call profile again
+    setBackendStatus('online');
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+  };
+
+  const value = {
+    user,
+    login,
+    logout,
+    loading,
+    backendStatus,
+    isAuthenticated: !!user
+  };
 
   return (
     <AuthContext.Provider value={value}>
+      {backendStatus === 'offline' && (
+        <div className="bg-red-500 text-white p-2 text-center">
+          Backend server is offline. Please make sure the server is running on port 5000.
+        </div>
+      )}
       {!loading && children}
     </AuthContext.Provider>
   );
