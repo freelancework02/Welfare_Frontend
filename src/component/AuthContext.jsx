@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkBackendStatus = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/health');
+      const response = await fetch('https://welfare-a0jo.onrender.com/api/health');
       return response.ok;
     } catch {
       return false;
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
 
       setBackendStatus('online');
 
-      const response = await fetch('http://localhost:5000/api/auth/profile', {
+      const response = await fetch('https://welfare-a0jo.onrender.com/api/auth/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
