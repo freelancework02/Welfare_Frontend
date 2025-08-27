@@ -8,6 +8,8 @@ import ViewBlogList from "./pages/homepage/elements/ViewBlog";
 import Login from './component/Login';
 import Register from './component/Register';
 import ProtectedRoute from './component/ProtectedRoute';
+import Updateblog from './pages/homepage/elements/Updateblog'
+import Blogview from './pages/homepage/elements/Blogview'
 
 // Dummy Dashboard Page
 const Dashboard = () => (
@@ -35,11 +37,31 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/blog"
             element={
               <ProtectedRoute>
                 <BlogDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/blog/:id"
+            element={
+              <ProtectedRoute>
+                <Blogview />
+              </ProtectedRoute>
+            }
+          />
+
+
+            <Route
+            path="/editblog/:id"
+            element={
+              <ProtectedRoute>
+                <Updateblog />
               </ProtectedRoute>
             }
           />
