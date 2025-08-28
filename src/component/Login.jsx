@@ -51,7 +51,7 @@ const Login = () => {
 
       if (response.ok) {
         login(data.user, data.token);
-        navigate('/');
+        navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');
       }
@@ -217,7 +217,7 @@ const Login = () => {
         </div>
 
         {/* Demo Credentials Hint */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
+        {/* <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-white mb-2 flex items-center">
             <AlertCircle className="w-4 h-4 mr-2 text-indigo-600" />
             Demo Access
@@ -225,7 +225,7 @@ const Login = () => {
           <p className="text-xs text-gray-600 dark:text-gray-400">
             Use admin/admin for testing purposes
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -10,14 +10,11 @@ import {
   MessageSquare,
   ChevronDown,
   Sun,
-  Moon,
-  Search,
-  Bell,
-  Settings
+  Moon
 } from "lucide-react";
 
 const sidebarLinks = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Create Blog", icon: FileText, path: "/blog" },
   { label: "View Blog", icon: MessageSquare, path: "/viewblog" },
 ];
@@ -39,14 +36,34 @@ const Layout = ({ children }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Apply dark mode class to body
+  // Apply dark mode class to body and save preference to localStorage
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
+    // Check for saved theme preference or respect OS preference
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    
+    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
     }
-  }, [isDarkMode]);
+  }, []);
+
+  // Toggle dark mode and save preference
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  };
 
   const getCurrentPageTitle = () => {
     const currentLink = sidebarLinks.find(
@@ -112,17 +129,18 @@ const Layout = ({ children }) => {
         </nav>
 
         {/* Sidebar footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
+        {/* <div className="p-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
           <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 text-sm">
             <span>v1.2.0</span>
             <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={toggleDarkMode}
               className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
           </div>
-        </div>
+        </div> */}
       </aside>
 
       {/* Main content area */}
@@ -139,27 +157,21 @@ const Layout = ({ children }) => {
               <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
             
-            {/* Search bar */}
-            <div className="hidden md:flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2 w-80">
-              <Search className="w-4 h-4 text-gray-500 mr-2" />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="bg-transparent border-none focus:outline-none text-sm w-full placeholder-gray-500 dark:placeholder-gray-400"
-              />
-            </div>
+            {/* Page title for mobile */}
+            <h1 className="md:hidden text-lg font-semibold text-gray-900 dark:text-white">
+              {getCurrentPageTitle()}
+            </h1>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Notification and settings */}
-            <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
-              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-            
-            <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            </button>
+            {/* Dark mode toggle for header (optional) */}
+            {/* <button 
+              onClick={toggleDarkMode}
+              className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button> */}
 
             {/* Profile dropdown */}
             <div className="relative">
@@ -190,12 +202,12 @@ const Layout = ({ children }) => {
                     <div className="p-2">
                       <button className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                         <User className="w-4 h-4" />
-                        Profile Settings
+                        User
                       </button>
                       <button
                         onClick={() => {
                           localStorage.removeItem("role");
-                          navigate("/login");
+                          navigate("/");
                         }}
                         className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       >
@@ -212,7 +224,7 @@ const Layout = ({ children }) => {
 
         {/* Breadcrumb and title */}
         <div className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{getCurrentPageTitle()}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white hidden md:block">{getCurrentPageTitle()}</h1>
           <nav className="flex text-sm text-gray-600 dark:text-gray-400 mt-1">
             <span className="hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer">Home</span>
             <span className="mx-2">/</span>
