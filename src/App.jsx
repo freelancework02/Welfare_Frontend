@@ -13,7 +13,7 @@ import Blogview from './pages/homepage/elements/Blogview'
 import AddTopic from './pages/homepage/elements/AddTopicForm'
 import Addcategoryform from './pages/homepage/elements/Addcategoryform'
 import TopicsView from "./pages/homepage/elements/Topicsview";
-import ViewCategory from "./pages/homepage/elements/viewcategory";
+import ViewCategory from "./pages/homepage/elements/ViewCategory";
 
 // Dummy Dashboard Page
 const Dashboard = () => (
