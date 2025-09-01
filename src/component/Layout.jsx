@@ -17,6 +17,10 @@ const sidebarLinks = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Create Blog", icon: FileText, path: "/blog" },
   { label: "View Blog", icon: MessageSquare, path: "/viewblog" },
+  { label: "Add Topic", icon: MessageSquare, path: "/addtopic" },
+  { label: "Add Category", icon: MessageSquare, path: "/addcategory" },
+    { label: "view Category", icon: MessageSquare, path: "/viewcategory" },
+    { label: "View Topic", icon: MessageSquare, path: "/viewtopic" },
 ];
 
 const Layout = ({ children }) => {

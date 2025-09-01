@@ -10,6 +10,10 @@ import Register from './component/Register';
 import ProtectedRoute from './component/ProtectedRoute';
 import Updateblog from './pages/homepage/elements/Updateblog'
 import Blogview from './pages/homepage/elements/Blogview'
+import AddTopic from './pages/homepage/elements/AddTopicForm'
+import Addcategoryform from './pages/homepage/elements/Addcategoryform'
+import TopicsView from "./pages/homepage/elements/Topicsview";
+import ViewCategory from "./pages/homepage/elements/viewcategory";
 
 // Dummy Dashboard Page
 const Dashboard = () => (
@@ -43,6 +47,42 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <BlogDetail />
+              </ProtectedRoute>
+            }
+          />
+
+           <Route
+            path="/addtopic"
+            element={
+              <ProtectedRoute>
+                <AddTopic />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/addcategory"
+            element={
+              <ProtectedRoute>
+                <Addcategoryform />
+              </ProtectedRoute>
+            }
+          />
+
+            <Route
+            path="/viewtopic"
+            element={
+              <ProtectedRoute>
+                <TopicsView />
+              </ProtectedRoute>
+            }
+          />
+
+            <Route
+            path="/viewcategory"
+            element={
+              <ProtectedRoute>
+                <ViewCategory />
               </ProtectedRoute>
             }
           />
